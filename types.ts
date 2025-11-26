@@ -17,6 +17,7 @@ export interface BookingWidgetConfig {
 
 export interface Ad {
   id: string;
+  userId?: string; // Links ad to the user in Supabase
   title: string;
   description: string;
   price: number;
@@ -175,4 +176,21 @@ export interface Notification {
   id: number;
   message: string;
   type: 'success' | 'info' | 'error';
+}
+
+// --- Chat Types ---
+export interface ChatMessage {
+    id: string;
+    chatId?: string;
+    senderId: string; // 'me' or user_id
+    text: string;
+    created_at: string;
+    isMe: boolean;
+}
+
+export interface ChatSession {
+  adId: string;
+  adTitle: string;
+  category: Category;
+  subCategory?: string;
 }

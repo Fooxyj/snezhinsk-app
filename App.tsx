@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Ad, Category, CreateAdFormState, NewsItem, User, CatalogCategory, Review, Movie, Shop, Product, CartItem, Story, Notification } from './types';
+import { Ad, Category, CreateAdFormState, NewsItem, User, CatalogCategory, Review, Movie, Shop, Product, CartItem, Story, Notification, ChatSession } from './types';
 import { AdCard } from './components/AdCard';
 import { CreateAdModal } from './components/CreateAdModal';
 import { AdPage } from './components/AdPage'; 
+import { ChatPage } from './components/ChatPage';
 import { NewsPage } from './components/NewsPage';
 import { LoginModal } from './components/LoginModal';
 import { ServiceCatalogModal } from './components/ServiceCatalogModal';
@@ -21,7 +22,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { supabase } from './services/supabaseClient';
 import { formatPhoneNumber } from './utils';
 
-// --- MOCK DATA ---
+// ... (KEEP INITIAL DATA AS IS - Assumed to be in context) ...
 const INITIAL_ADS: Ad[] = [
   {
     id: '1',
@@ -178,7 +179,6 @@ const INITIAL_ADS: Ad[] = [
     specs: { condition: 'used', brand: 'Apple' },
     status: 'approved'
   },
-  // Sample Pending Ad
   {
     id: '100',
     title: 'Гараж в кооперативе №7',
@@ -280,7 +280,7 @@ const INITIAL_SHOPS: Shop[] = [
         phone: '+7 (35146) 3 22 11',
         workingHours: 'Пн-Вс: 09:00 - 20:00',
         rating: 4.8,
-        paymentConfig: { enabled: true, type: 'online' }, // ENABLED ONLINE PAYMENT
+        paymentConfig: { enabled: true, type: 'online' }, 
         products: [
             { id: 'p1', title: 'Дрель ударная Makita', price: 5500, image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400', description: 'Мощная дрель для профессиональных работ. В комплекте кейс и набор сверл.' },
             { id: 'p2', title: 'Краска интерьерная', price: 1200, image: 'https://images.unsplash.com/photo-1562259920-47afc305f369?w=400', description: 'Моющаяся матовая краска для стен и потолков. Объем 2.5 литра.' },
@@ -299,7 +299,7 @@ const INITIAL_SHOPS: Shop[] = [
         phone: '+7 (922) 222 33 44',
         workingHours: 'Пн-Вс: 08:00 - 21:00',
         rating: 4.9,
-        paymentConfig: { enabled: false, type: 'manual', phone: '+79222223344' }, // MANUAL WHATSAPP ORDER
+        paymentConfig: { enabled: false, type: 'manual', phone: '+79222223344' }, 
         products: [
             { id: 'f1', title: 'Букет из 51 розы', price: 5500, image: 'https://images.unsplash.com/photo-1562690868-60bbe7293e94?w=400', description: 'Роскошный букет из красных роз сорта Эксплорер (60см).' },
             { id: 'f2', title: 'Пионы розовые', price: 450, image: 'https://images.unsplash.com/photo-1563241527-3af16059d4c9?w=400', description: 'Свежие голландские пионы. Цена за 1 шт.' },
@@ -328,7 +328,7 @@ const INITIAL_SHOPS: Shop[] = [
         id: 'cinema1',
         name: 'Кинотеатр "Космос"',
         description: 'Премьеры мирового кинематографа, комфортные залы и вкусный попкорн.',
-        logo: 'https://avatars.mds.yandex.net/get-kinopoisk-image/10535692/d4050d27-6f01-49b0-9f1c-755106596131/1920x', // Using Kung Fu Panda or similar quality image for logo
+        logo: 'https://avatars.mds.yandex.net/get-kinopoisk-image/10535692/d4050d27-6f01-49b0-9f1c-755106596131/1920x',
         coverImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200',
         address: 'ул. Васильева 35',
         phone: '+7 (35146) 3 00 00',
@@ -354,7 +354,7 @@ const INITIAL_CAFES: Shop[] = [
         phone: '+7 (35146) 9 20 20',
         workingHours: 'Пн-Вс: 11:00 - 23:00',
         rating: 4.9,
-        paymentConfig: { enabled: true, type: 'online' }, // ENABLED ONLINE PAYMENT
+        paymentConfig: { enabled: true, type: 'online' },
         products: [
             { id: 'm1', title: 'Пицца Пепперони', price: 650, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400', description: 'Классическая пицца с колбасками пепперони, моцареллой и томатным соусом. 30см.' },
             { id: 'm2', title: 'Паста Карбонара', price: 480, image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400', description: 'Спагетти с беконом, сливочным соусом и пармезаном.' },
@@ -439,7 +439,48 @@ const SERVICE_CATALOG: CatalogCategory[] = [
   }
 ];
 
-// Extracted SidebarItem to prevent unnecessary re-renders
+const mapAdFromDB = (item: any): Ad => ({
+    id: item.id,
+    userId: item.user_id, 
+    title: item.title,
+    description: item.description,
+    price: Number(item.price), 
+    category: item.category,
+    subCategory: item.sub_category,
+    contact: item.contact,
+    location: item.location,
+    image: item.image || 'https://via.placeholder.com/800x600?text=No+Image',
+    images: item.images || [item.image || 'https://via.placeholder.com/800x600?text=No+Image'],
+    isPremium: item.is_premium,
+    bookingAvailable: false,
+    date: item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : 'Недавно',
+    reviews: [],
+    specs: item.specs || {},
+    status: item.status || 'approved'
+});
+
+const mapSupabaseUser = (sbUser: any): User => {
+  const metadata = sbUser.user_metadata || {};
+  let isAdmin = false;
+  let managedShopId = undefined;
+  
+  if (sbUser.email === 'hrustalev_1974@mail.ru') isAdmin = true;
+  if (sbUser.email === 'shop@snezhinsk.ru') managedShopId = 's1';
+  if (sbUser.email === 'cinema@snezhinsk.ru') managedShopId = 'cinema1';
+
+  return {
+    id: sbUser.id,
+    email: sbUser.email,
+    phone: metadata.phone || '',
+    name: metadata.full_name || 'Пользователь',
+    isLoggedIn: true,
+    avatar: metadata.avatar_url,
+    isAdmin,
+    managedShopId
+  };
+};
+
+// SidebarItem Component
 const SidebarItem = ({ label, icon, active, onClick }: { label: string, icon: React.ReactNode, active: boolean, onClick: () => void }) => (
   <button 
     onClick={onClick}
@@ -453,6 +494,7 @@ const SidebarItem = ({ label, icon, active, onClick }: { label: string, icon: Re
   </button>
 );
 
+// SnezhikLogo Component
 const SnezhikLogo = ({ className = "w-10 h-10" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2v20M2 12h20" className="text-blue-300" />
@@ -471,50 +513,6 @@ interface WeatherData {
   humidity: number;
 }
 
-// Reusable mapper for DB ads
-const mapAdFromDB = (item: any): Ad => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    price: Number(item.price), 
-    category: item.category,
-    subCategory: item.sub_category,
-    contact: item.contact,
-    location: item.location,
-    image: item.image || 'https://via.placeholder.com/800x600?text=No+Image',
-    images: item.images || [item.image || 'https://via.placeholder.com/800x600?text=No+Image'],
-    isPremium: item.is_premium,
-    bookingAvailable: false,
-    date: item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : 'Недавно',
-    reviews: [],
-    specs: item.specs || {},
-    status: item.status || 'approved'
-});
-
-// Helper to map Supabase user to App user
-const mapSupabaseUser = (sbUser: any): User => {
-  const metadata = sbUser.user_metadata || {};
-  let isAdmin = false;
-  let managedShopId = undefined;
-  
-  // Simple role mapping based on email for demo purposes
-  // In production, this should be in a 'profiles' table or role claims
-  if (sbUser.email === 'admin@snezhinsk.ru') isAdmin = true;
-  if (sbUser.email === 'shop@snezhinsk.ru') managedShopId = 's1';
-  if (sbUser.email === 'cinema@snezhinsk.ru') managedShopId = 'cinema1';
-
-  return {
-    id: sbUser.id,
-    email: sbUser.email,
-    phone: metadata.phone || '', // Store phone in metadata if collected later
-    name: metadata.full_name || 'Пользователь',
-    isLoggedIn: true,
-    avatar: metadata.avatar_url,
-    isAdmin,
-    managedShopId
-  };
-};
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<Category | 'news'>('all');
   const [subCategoryFilter, setSubCategoryFilter] = useState<string>('');
@@ -526,46 +524,36 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  
+  // Ads State
   const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
-  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
   
-  // Cinema State
+  // Chat State
+  const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
+
+  // Other Data
+  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
   const [movies, setMovies] = useState<Movie[]>(INITIAL_MOVIES);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-
-  // Shop State
   const [shops, setShops] = useState<Shop[]>(INITIAL_SHOPS);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isMerchantDashboardOpen, setIsMerchantDashboardOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cafes] = useState<Shop[]>(INITIAL_CAFES);
-
-  // Cart State
+  const [cafes, setCafes] = useState<Shop[]>(INITIAL_CAFES);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // New Features State
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [filters, setFilters] = useState({
-      minPrice: '',
-      maxPrice: '',
-      minYear: '',
-      maxMileage: '',
-      minRooms: '',
-      floor: '',
-      condition: '' // new filter for goods
+      minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' 
   });
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  
-  // Admin State
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
 
-  // Combine shops for lookup
   const allShops = [...shops, ...cafes];
 
-  // Helper to add notification
+  // --- Functions ---
   const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
       const newNote = { id: Date.now(), message, type };
       setNotifications(prev => [...prev, newNote]);
@@ -575,35 +563,50 @@ export default function App() {
       setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Supabase Auth Listener
+  const fetchFavorites = async (userId: string) => {
+      if (!supabase) return;
+      try {
+          const { data, error } = await supabase
+              .from('favorites')
+              .select('ad_id')
+              .eq('user_id', userId);
+          
+          if (error) {
+              console.error('Error fetching favorites:', error);
+          } else {
+              setFavorites(data.map((item: any) => item.ad_id));
+          }
+      } catch (err) {
+          console.error('Failed to fetch favorites', err);
+      }
+  };
+
+  // --- Effects ---
   useEffect(() => {
     if (!supabase) return;
-
-    // Check active session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-         setUser(mapSupabaseUser(session.user));
+         const appUser = mapSupabaseUser(session.user);
+         setUser(appUser);
+         fetchFavorites(appUser.id);
       }
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const appUser = mapSupabaseUser(session.user);
         setUser(appUser);
-        // We don't need to manually store in localStorage, supabase handles persistence
+        fetchFavorites(appUser.id);
       } else {
         setUser(null);
+        setFavorites([]);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-
-  // Supabase Data Fetching & Realtime (Ads)
   useEffect(() => {
-    // If Supabase is not configured, stick with mock data
     if (!supabase) return;
 
     const fetchAds = async () => {
@@ -614,11 +617,9 @@ export default function App() {
           .order('created_at', { ascending: false });
 
         if (error) {
-            console.warn('Supabase fetch error (falling back to mock data):', error.message);
+            console.warn('Supabase fetch error:', error.message);
         } else if (data) {
             const mappedAds = data.map(mapAdFromDB);
-            
-            // Merge with initial ads or replace. 
             const initialIds = new Set(INITIAL_ADS.map(a => a.id));
             const filteredMapped = mappedAds.filter(a => !initialIds.has(a.id));
             setAds([...filteredMapped, ...INITIAL_ADS]);
@@ -630,7 +631,6 @@ export default function App() {
 
     fetchAds();
 
-    // Realtime Subscription
     const channel = supabase
       .channel('public:ads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ads' }, (payload) => {
@@ -638,7 +638,9 @@ export default function App() {
             const newAd = mapAdFromDB(payload.new);
             setAds((prev) => {
                 if (prev.some(a => a.id === newAd.id)) return prev;
-                addNotification(`Новое объявление: ${newAd.title}`, 'info');
+                if(newAd.status === 'approved' || user?.isAdmin) {
+                    addNotification(`Новое объявление: ${newAd.title}`, 'info');
+                }
                 return [newAd, ...prev];
             });
          } 
@@ -659,18 +661,72 @@ export default function App() {
     };
   }, []);
 
-  // Helper to switch tabs and reset filters
+  useEffect(() => {
+      const localAvatar = localStorage.getItem('user_avatar');
+      if (user && localAvatar && !user.avatar) {
+          setUser({ ...user, avatar: localAvatar });
+      }
+  }, [user?.email]);
+
+  // Weather Logic
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=56.08&longitude=60.73&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,weather_code&wind_speed_unit=ms',
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error('API Error');
+        const data = await res.json();
+        const code = data.current.weather_code;
+        let condition = 'Ясно';
+        
+        if (code > 0 && code <= 3) { condition = 'Облачно'; }
+        else if (code >= 45 && code <= 48) { condition = 'Туман'; }
+        else if (code >= 51 && code <= 67) { condition = 'Дождь'; }
+        else if (code >= 71 && code <= 77) { condition = 'Снег'; }
+        else if (code >= 80 && code <= 82) { condition = 'Ливень'; }
+        else if (code >= 85 && code <= 86) { condition = 'Снегопад'; }
+
+        const pressureMmHg = Math.round(data.current.surface_pressure * 0.750062);
+
+        setWeather({
+          temp: Math.round(data.current.temperature_2m),
+          condition,
+          wind: Math.round(data.current.wind_speed_10m),
+          pressure: pressureMmHg,
+          humidity: data.current.relative_humidity_2m
+        });
+      } catch (error) {
+        console.warn("Weather fetch failed, using fallback");
+        setWeather({
+          temp: -12,
+          condition: 'Снег',
+          wind: 4,
+          pressure: 745,
+          humidity: 82
+        });
+      }
+    };
+    fetchWeather();
+  }, []);
+
+  // --- Handlers ---
   const handleTabChange = (tab: Category | 'news') => {
     setActiveTab(tab);
     setSubCategoryFilter('');
     setSelectedAd(null);
     setSelectedShop(null);
-    setSelectedNews(null); // Ensure news is cleared
+    setSelectedNews(null);
     setFilters({ minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Cart Logic
   const addToCart = (product: Product, quantity: number, shopId?: string) => {
     const effectiveShopId = shopId || selectedShop?.id;
     if (!effectiveShopId) return;
@@ -703,90 +759,50 @@ export default function App() {
     }));
   };
 
-  const toggleFavorite = (adId: string) => {
+  const toggleFavorite = async (adId: string) => {
+      const isFav = favorites.includes(adId);
       setFavorites(prev => {
-          const isFav = prev.includes(adId);
-          if (isFav) {
-              return prev.filter(id => id !== adId);
-          } else {
-              addNotification('Добавлено в избранное', 'success');
-              return [...prev, adId];
-          }
+          if (isFav) return prev.filter(id => id !== adId);
+          return [...prev, adId];
       });
+
+      if (!user) {
+          addNotification('Войдите, чтобы сохранять избранное навсегда', 'info');
+          return;
+      }
+
+      if (supabase && user) {
+          try {
+              if (isFav) {
+                  await supabase.from('favorites').delete().match({ user_id: user.id, ad_id: adId });
+              } else {
+                  await supabase.from('favorites').insert({ user_id: user.id, ad_id: adId });
+              }
+          } catch (err) {
+              console.error('Error updating favorites:', err);
+          }
+      }
+      
+      if (!isFav) addNotification('Добавлено в избранное', 'success');
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
-      // Optimistic update
       setUser(updatedUser);
-      
-      // Update metadata in Supabase
       if (supabase) {
         const { error } = await supabase.auth.updateUser({
-          data: { 
-            full_name: updatedUser.name,
-            // avatar_url: updatedUser.avatar - would require storage bucket, skipping for now
-          }
+          data: { full_name: updatedUser.name }
         });
         if (error) {
            console.error("Failed to update user metadata", error);
            addNotification("Ошибка обновления профиля", "error");
         } else {
            addNotification('Профиль обновлен', 'success');
+           if (updatedUser.avatar) localStorage.setItem('user_avatar', updatedUser.avatar);
         }
       }
   };
 
-  // Weather Fetch
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const res = await fetch(
-          'https://api.open-meteo.com/v1/forecast?latitude=56.08&longitude=60.73&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,weather_code&wind_speed_unit=ms',
-          { signal: controller.signal }
-        );
-        clearTimeout(timeoutId);
-
-        if (!res.ok) throw new Error('API Error');
-        const data = await res.json();
-        
-        const code = data.current.weather_code;
-        let condition = 'Ясно';
-        
-        if (code > 0 && code <= 3) { condition = 'Облачно'; }
-        else if (code >= 45 && code <= 48) { condition = 'Туман'; }
-        else if (code >= 51 && code <= 67) { condition = 'Дождь'; }
-        else if (code >= 71 && code <= 77) { condition = 'Снег'; }
-        else if (code >= 80 && code <= 82) { condition = 'Ливень'; }
-        else if (code >= 85 && code <= 86) { condition = 'Снегопад'; }
-
-        const pressureMmHg = Math.round(data.current.surface_pressure * 0.750062);
-
-        setWeather({
-          temp: Math.round(data.current.temperature_2m),
-          condition,
-          wind: Math.round(data.current.wind_speed_10m),
-          pressure: pressureMmHg,
-          humidity: data.current.relative_humidity_2m
-        });
-      } catch (error) {
-        setWeather({
-          temp: -12,
-          condition: 'Снег',
-          wind: 4,
-          pressure: 745,
-          humidity: 82
-        });
-      }
-    };
-    
-    fetchWeather();
-  }, []);
-
   const handleCreateAd = async (form: CreateAdFormState) => {
-    // Map form specs strings to number or keep string
     const specs: Ad['specs'] = {};
     if (form.specs?.year) specs.year = Number(form.specs.year);
     if (form.specs?.mileage) specs.mileage = Number(form.specs.mileage);
@@ -798,6 +814,7 @@ export default function App() {
 
     const newAd: Ad = {
       id: Date.now().toString(),
+      userId: user?.id,
       title: form.title,
       description: form.description,
       price: Number(form.price),
@@ -811,14 +828,14 @@ export default function App() {
       date: 'Только что',
       reviews: [],
       specs: Object.keys(specs).length > 0 ? specs : undefined,
-      status: 'pending' // Default status is pending for regular users
+      status: 'pending'
     };
 
-    // If Supabase is connected, we will rely on Realtime for the update OR re-fetch
     if (supabase) {
         addNotification('Отправка...', 'info');
         try {
             const { error } = await supabase.from('ads').insert({
+                user_id: user?.id,
                 title: newAd.title,
                 description: newAd.description,
                 price: newAd.price,
@@ -836,68 +853,45 @@ export default function App() {
 
             if (error) {
                 console.error('Error creating ad in DB:', error.message);
-                addNotification('Ошибка при сохранении (проверьте консоль)', 'error');
+                addNotification('Ошибка при сохранении', 'error');
             } else {
-                addNotification('Объявление отправлено!', 'success');
+                addNotification('Объявление отправлено на модерацию!', 'success');
             }
         } catch (err) {
             console.error('Supabase Insert Exception:', err);
             addNotification('Ошибка сети', 'error');
         }
     } else {
-        // Fallback for offline mode
         setAds([newAd, ...ads]);
         addNotification('Объявление создано (оффлайн режим)', 'success');
     }
-    
     handleTabChange('all');
   };
 
   const handleUpdateAdStatus = (adId: string, status: 'approved' | 'rejected') => {
-      // Optimistic UI update
       setAds(prev => {
-          if (status === 'rejected') {
-              return prev.filter(ad => ad.id !== adId);
-          }
+          if (status === 'rejected') return prev.filter(ad => ad.id !== adId);
           return prev.map(ad => ad.id === adId ? { ...ad, status } : ad);
       });
-      
       if (supabase) {
           supabase.from('ads').update({ status }).eq('id', adId).then(({ error }) => {
-              if (error) { 
-                  console.error('Error updating status:', error);
-                  addNotification('Ошибка обновления статуса', 'error');
-              }
+              if (error) addNotification('Ошибка обновления статуса', 'error');
           });
       }
   };
 
   const handleUpdateAdContent = (adId: string, updatedFields: Partial<Ad>) => {
-      // Optimistic UI update
       setAds(prev => prev.map(ad => ad.id === adId ? { ...ad, ...updatedFields } : ad));
       addNotification('Объявление обновлено', 'success');
-      
        if (supabase) {
-          // Map back to snake_case if needed
           const dbFields: any = { ...updatedFields };
-          if (updatedFields.isPremium !== undefined) {
-              dbFields.is_premium = updatedFields.isPremium;
-              delete dbFields.isPremium;
-          }
-          if (updatedFields.subCategory !== undefined) {
-              dbFields.sub_category = updatedFields.subCategory;
-              delete dbFields.subCategory;
-          }
-          
-          supabase.from('ads').update(dbFields).eq('id', adId).then(({ error }) => {
-               if (error) console.error('Error updating content:', error);
-          });
+          if (updatedFields.isPremium !== undefined) { dbFields.is_premium = updatedFields.isPremium; delete dbFields.isPremium; }
+          if (updatedFields.subCategory !== undefined) { dbFields.sub_category = updatedFields.subCategory; delete dbFields.subCategory; }
+          supabase.from('ads').update(dbFields).eq('id', adId);
        }
   };
 
-  const handleAddNews = (newsItem: NewsItem) => {
-      setNews([newsItem, ...news]);
-  };
+  const handleAddNews = (newsItem: NewsItem) => setNews([newsItem, ...news]);
 
   const handleAddReview = (adId: string, rating: number, text: string) => {
      setAds(prevAds => prevAds.map(ad => {
@@ -911,9 +905,7 @@ export default function App() {
              };
              const currentReviews = ad.reviews || [];
              const updatedAd = { ...ad, reviews: [newReview, ...currentReviews] };
-             if (selectedAd && selectedAd.id === adId) {
-                 setSelectedAd(updatedAd);
-             }
+             if (selectedAd && selectedAd.id === adId) setSelectedAd(updatedAd);
              return updatedAd;
          }
          return ad;
@@ -921,22 +913,25 @@ export default function App() {
      addNotification('Спасибо за ваш отзыв!', 'success');
   };
 
-  const filteredAds = ads.filter(ad => {
-    // 0. Only show approved ads (or if user is admin/owner - logic simplified here)
-    if (ad.status !== 'approved') return false;
+  const handleUpdateShop = (updatedShop: Shop) => setShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
 
-    // 1. Basic Filters
+  const handleOpenShopFromStory = (shopId: string) => {
+    if (shopId === 'cinema1' || shopId.includes('cinema')) { handleTabChange('cinema'); return; }
+    const cafe = cafes.find(c => c.id === shopId);
+    if (cafe) { handleTabChange('cafes'); setSelectedShop(cafe); return; }
+    const shop = shops.find(s => s.id === shopId);
+    if (shop) { handleTabChange('shops'); setSelectedShop(shop); return; }
+  };
+
+  // Filters
+  const filteredAds = ads.filter(ad => {
+    if (ad.status !== 'approved') return false;
     const matchesCategory = activeTab === 'all' || ad.category === activeTab;
     const matchesSubCategory = !subCategoryFilter || ad.subCategory === subCategoryFilter;
-    const matchesSearch = ad.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          ad.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // 2. Advanced Filters
+    const matchesSearch = ad.title.toLowerCase().includes(searchQuery.toLowerCase()) || ad.description.toLowerCase().includes(searchQuery.toLowerCase());
     let matchesAdvanced = true;
     if (filters.minPrice && ad.price < Number(filters.minPrice)) matchesAdvanced = false;
     if (filters.maxPrice && ad.price > Number(filters.maxPrice)) matchesAdvanced = false;
-
-    // Specs Filtering
     if (ad.specs) {
         if (filters.minYear && (!ad.specs.year || ad.specs.year < Number(filters.minYear))) matchesAdvanced = false;
         if (filters.maxMileage && (!ad.specs.mileage || ad.specs.mileage > Number(filters.maxMileage))) matchesAdvanced = false;
@@ -944,736 +939,359 @@ export default function App() {
         if (filters.floor && (!ad.specs.floor || ad.specs.floor !== Number(filters.floor))) matchesAdvanced = false;
         if (filters.condition && (!ad.specs.condition || ad.specs.condition !== filters.condition)) matchesAdvanced = false;
     }
-
     return matchesCategory && matchesSubCategory && matchesSearch && matchesAdvanced;
   });
 
   const premiumAds = filteredAds.filter(ad => ad.isPremium);
   const standardAds = filteredAds.filter(ad => !ad.isPremium);
-
-  const handleUpdateShop = (updatedShop: Shop) => {
-      setShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
-  };
-
-  // Determine which advanced filters to show
   const showCarFilters = activeTab === 'sale' && subCategoryFilter === 'Автомобили';
-  const showRealEstateFilters = (activeTab === 'sale' || activeTab === 'rent') && 
-                                (subCategoryFilter === 'Квартиры' || subCategoryFilter === 'Дома, дачи');
-  
-  // Show Goods filters for relevant categories (Electronics, etc)
-  const isGoodsCategory = activeTab === 'sale' && !showCarFilters && !showRealEstateFilters && 
-                          subCategoryFilter !== '' && subCategoryFilter !== 'Земельные участки' && subCategoryFilter !== 'Гаражи';
-
-  // Get current subcategories for chips
+  const showRealEstateFilters = (activeTab === 'sale' || activeTab === 'rent') && (subCategoryFilter === 'Квартиры' || subCategoryFilter === 'Дома, дачи');
   const activeCatalogCategory = SERVICE_CATALOG.find(c => c.id === activeTab);
   const subCategories = activeCatalogCategory ? activeCatalogCategory.groups.flatMap(g => g.items) : [];
 
   return (
-    <div className="min-h-screen bg-background text-dark font-sans selection:bg-primary/20">
+    <div className="min-h-screen bg-background text-dark font-sans selection:bg-primary/20 pb-20 lg:pb-0">
       
       <ToastNotification notifications={notifications} onRemove={removeNotification} />
 
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-surface/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200">
-        <div className="px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsCatalogOpen(true)} className="p-2 -ml-2 text-dark">
-               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('all')}>
-               <SnezhikLogo className="w-8 h-8 text-primary" />
-               <h1 className="text-xl font-extrabold text-primary tracking-tight">Твой<span className="text-dark">Снежинск</span></h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-             {user ? (
-                <div 
-                    onClick={() => setIsUserProfileOpen(true)}
-                    className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden cursor-pointer border border-gray-300"
-                >
-                    {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-xs">{user.name?.charAt(0) || user.email.charAt(0)}</div>}
-                </div>
-             ) : (
-                <button onClick={() => setIsLoginOpen(true)} className="text-sm font-bold text-dark bg-gray-100 px-3 py-2 rounded-lg">
-                  Войти
-                </button>
-             )}
-          </div>
-        </div>
-        
-        {/* Stories Bar (Mobile) */}
-        {!selectedAd && !selectedShop && !selectedNews && <StoriesBar stories={INITIAL_STORIES} />}
+      {/* RENDER CHAT PAGE AS FULL OVERLAY IF ACTIVE */}
+      {activeChat && (
+          <ChatPage 
+             session={activeChat} 
+             onBack={() => setActiveChat(null)} 
+             currentUserId={user?.id}
+          />
+      )}
 
-        {/* Mobile Filter Tabs */}
+      {/* --- DESKTOP HEADER --- */}
+      <header className="hidden lg:block bg-surface border-b border-gray-200 sticky top-0 z-40">
+           <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-8">
+               <div className="flex items-center gap-8">
+                   <div className="flex items-center gap-2 cursor-pointer group" onClick={() => handleTabChange('all')}>
+                       <SnezhikLogo className="w-10 h-10 text-primary transition-transform group-hover:scale-110" />
+                       <div className="flex flex-col leading-none">
+                           <h1 className="text-2xl font-extrabold text-primary tracking-tight">Твой<span className="text-dark">Снежинск</span></h1>
+                           <span className="text-[10px] text-secondary tracking-widest uppercase">Городской портал</span>
+                       </div>
+                   </div>
+                   <button onClick={() => setIsCatalogOpen(true)} className="bg-dark text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md active:scale-95">
+                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                       Каталог
+                   </button>
+               </div>
+               <div className="flex-grow max-w-xl relative">
+                   <input type="text" placeholder="Поиск..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-gray-100 border-2 border-transparent rounded-xl py-2.5 pl-11 pr-4 text-sm focus:bg-white focus:border-primary focus:outline-none transition-all" />
+                   <svg className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+               </div>
+               <div className="flex items-center gap-6">
+                   {weather && (
+                       <div className="flex items-center gap-3 text-right">
+                           <div className="hidden xl:block">
+                               <div className="text-lg font-bold text-dark leading-none">{weather.temp > 0 ? '+' : ''}{weather.temp}°</div>
+                               <div className="text-xs text-secondary">{weather.condition}</div>
+                           </div>
+                           <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
+                           </div>
+                           <div className="hidden xl:block">
+                                <div className="text-xs font-bold text-dark">{weather.pressure} мм</div>
+                                <div className="text-xs text-secondary">{new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</div>
+                           </div>
+                       </div>
+                   )}
+                   {cart.length > 0 && (
+                        <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-dark hover:text-primary transition-colors">
+                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">{cart.length}</span>
+                        </button>
+                   )}
+                   <div className="h-8 w-px bg-gray-200"></div>
+                   <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95 flex items-center gap-2">
+                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                       Подать
+                   </button>
+                   {user ? (
+                       <button onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-3 hover:bg-gray-50 px-2 py-1 rounded-xl transition-colors">
+                           <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-md overflow-hidden">
+                               {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : user.name?.charAt(0)}
+                           </div>
+                           <div className="text-left hidden xl:block">
+                               <div className="text-sm font-bold text-dark">{user.name}</div>
+                               <div className="text-xs text-secondary">Мой профиль</div>
+                           </div>
+                       </button>
+                   ) : (
+                       <button onClick={() => setIsLoginOpen(true)} className="text-dark font-bold hover:text-primary transition-colors text-sm">Войти</button>
+                   )}
+               </div>
+           </div>
+      </header>
+
+      {/* Mobile Header */}
+      <header className="lg:hidden bg-surface/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200">
+        <div className="px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('all')}>
+               <SnezhikLogo className="w-8 h-8 text-primary" />
+               <div className="flex flex-col leading-none">
+                  <h1 className="text-xl font-extrabold text-primary tracking-tight">Твой<span className="text-dark">Снежинск</span></h1>
+                  {weather && <span className="text-[10px] text-secondary font-medium mt-0.5 flex items-center gap-1">{weather.temp > 0 ? '+' : ''}{weather.temp}°, {weather.condition}</span>}
+               </div>
+            </div>
+            {cart.length > 0 && (
+                <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-dark">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{cart.length}</span>
+                </button>
+            )}
+        </div>
         {!selectedAd && !selectedShop && !selectedNews && (
-          <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar">
-             <button onClick={() => handleTabChange('all')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'all' ? 'bg-dark text-white' : 'bg-white text-secondary border border-gray-200'}`}>Все</button>
-             <button onClick={() => handleTabChange('sale')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'sale' ? 'bg-green-500 text-white' : 'bg-white text-secondary border border-gray-200'}`}>Продажа</button>
-             <button onClick={() => handleTabChange('rent')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'rent' ? 'bg-blue-500 text-white' : 'bg-white text-secondary border border-gray-200'}`}>Аренда</button>
-             <button onClick={() => handleTabChange('services')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'services' ? 'bg-purple-500 text-white' : 'bg-white text-secondary border border-gray-200'}`}>Услуги</button>
-             <button onClick={() => handleTabChange('jobs')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'jobs' ? 'bg-orange-500 text-white' : 'bg-white text-secondary border border-gray-200'}`}>Работа</button>
-             <button onClick={() => handleTabChange('shops')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors flex items-center gap-1 ${activeTab === 'shops' ? 'bg-emerald-600 text-white' : 'bg-white text-secondary border border-gray-200'}`}>
-                 <span>🛍️</span> Магазины
-             </button>
-             <button onClick={() => handleTabChange('cafes')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors flex items-center gap-1 ${activeTab === 'cafes' ? 'bg-rose-600 text-white' : 'bg-white text-secondary border border-gray-200'}`}>
-                 <span>☕</span> Кафе
-             </button>
-             <button onClick={() => handleTabChange('cinema')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors flex items-center gap-1 ${activeTab === 'cinema' ? 'bg-gray-800 text-white' : 'bg-white text-secondary border border-gray-200'}`}>
-                 <span>🍿</span> Кино
-             </button>
-             <button onClick={() => handleTabChange('news')} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${activeTab === 'news' ? 'bg-red-500 text-white' : 'bg-white text-secondary border border-gray-200'}`}>Новости</button>
-             <button onClick={() => setIsPartnerModalOpen(true)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors flex items-center gap-1 bg-white text-dark border border-gray-200 shadow-sm`}>
-                <span>💼</span> Бизнес
-             </button>
-          </div>
+            <div className="px-4 pb-3">
+                <div className="relative">
+                    <input type="text" placeholder="Поиск..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-gray-100 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-primary/20" />
+                    <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+            </div>
         )}
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-8">
-          
-          {/* DESKTOP SIDEBAR */}
-          <aside className="hidden lg:block w-64 flex-shrink-0 space-y-6 sticky top-6 h-fit">
-            {/* Logo */}
-            <div className="px-2 mb-2 cursor-pointer flex items-center gap-3" onClick={() => handleTabChange('all')}>
-               <SnezhikLogo className="w-12 h-12 text-primary" />
-               <h1 className="text-2xl font-extrabold text-primary tracking-tight">Твой<br/><span className="text-dark">Снежинск</span></h1>
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-gray-200 z-40 flex justify-between items-center px-6 py-2 pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
+         <button onClick={() => handleTabChange('all')} className={`flex flex-col items-center gap-1 ${activeTab === 'all' && !selectedShop && !selectedNews ? 'text-primary' : 'text-gray-400'}`}>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            <span className="text-[10px] font-medium">Главная</span>
+         </button>
+         <button onClick={() => setIsCatalogOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 hover:text-primary">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            <span className="text-[10px] font-medium">Каталог</span>
+         </button>
+         <button onClick={() => setIsCreateModalOpen(true)} className="flex flex-col items-center justify-center -mt-6">
+            <div className="w-14 h-14 rounded-full bg-dark text-white flex items-center justify-center shadow-lg shadow-dark/40 active:scale-95 transition-transform">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
             </div>
-
-            {/* Weather Widget */}
-            <div className="bg-gradient-to-br from-primary to-blue-600 rounded-2xl p-5 shadow-lg shadow-primary/30 text-white relative overflow-hidden">
-               <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-               
-               <h3 className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-4 relative z-10">Погода в Снежинске</h3>
-               <div className="flex items-baseline gap-2 mb-6 relative z-10">
-                 <span className="text-5xl font-extrabold tracking-tighter">
-                    {weather ? `${weather.temp > 0 ? '+' : ''}${weather.temp}°` : '--'}
-                 </span>
-                 <span className="text-sm font-medium text-blue-100">{weather ? weather.condition : 'Загрузка...'}</span>
-               </div>
-               
-               {weather && (
-                   <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm relative z-10">
-                       <div>
-                           <p className="text-xs text-blue-200 mb-1">Ветер</p>
-                           <p className="font-semibold">{weather.wind} м/с</p>
-                       </div>
-                       <div>
-                           <p className="text-xs text-blue-200 mb-1">Давление</p>
-                           <p className="font-semibold">{weather.pressure} мм</p>
-                       </div>
-                   </div>
-               )}
-            </div>
-
-             {/* Admin Panel Button */}
-             {user && user.isAdmin && (
-                <button 
-                  onClick={() => setIsAdminPanelOpen(true)}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-3 rounded-xl shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-between group"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        </div>
-                        <div className="text-left">
-                            <span className="block font-bold text-sm">Админ. панель</span>
-                        </div>
-                    </div>
-                </button>
-            )}
-
-            {/* Merchant Dashboard Button */}
-            {user && user.managedShopId && (
-                <button 
-                  onClick={() => setIsMerchantDashboardOpen(true)}
-                  className="w-full bg-gradient-to-r from-gray-800 to-gray-900 text-white px-4 py-3 rounded-xl shadow-lg shadow-gray-400/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-between group"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                        </div>
-                        <div className="text-left">
-                            <span className="block font-bold text-sm">{user.managedShopId.startsWith('cinema') ? 'Кабинет Кино' : 'Мой бизнес'}</span>
-                        </div>
-                    </div>
-                </button>
-            )}
-
-            {/* Navigation */}
-            <nav className="bg-surface rounded-2xl shadow-sm border border-gray-100 p-3 space-y-1">
-               <SidebarItem 
-                 label="Все объявления" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
-                 active={activeTab === 'all' && !selectedAd && !selectedShop && !selectedNews} 
-                 onClick={() => handleTabChange('all')} 
-               />
-               <SidebarItem 
-                 label="Продажа" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
-                 active={activeTab === 'sale' && !selectedAd && !selectedShop && !selectedNews} 
-                 onClick={() => handleTabChange('sale')} 
-               />
-               <SidebarItem 
-                 label="Аренда" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>}
-                 active={activeTab === 'rent' && !selectedAd && !selectedShop && !selectedNews} 
-                 onClick={() => handleTabChange('rent')} 
-               />
-               <SidebarItem 
-                 label="Услуги" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-                 active={activeTab === 'services' && !selectedAd && !selectedShop && !selectedNews} 
-                 onClick={() => handleTabChange('services')} 
-               />
-               <SidebarItem 
-                 label="Работа" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-                 active={activeTab === 'jobs' && !selectedAd && !selectedShop && !selectedNews} 
-                 onClick={() => handleTabChange('jobs')} 
-               />
-               
-               <div className="my-2 border-t border-gray-100 mx-2"></div>
-
-               <SidebarItem 
-                 label="Магазины" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
-                 active={activeTab === 'shops' && !selectedShop} 
-                 onClick={() => handleTabChange('shops')} 
-               />
-
-               <SidebarItem 
-                 label="Кафе" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>}
-                 active={activeTab === 'cafes' && !selectedShop} 
-                 onClick={() => handleTabChange('cafes')} 
-               />
-
-               <SidebarItem 
-                 label="Кино" 
-                 icon={<span className="text-xl leading-none">🍿</span>}
-                 active={activeTab === 'cinema'} 
-                 onClick={() => handleTabChange('cinema')} 
-               />
-               <SidebarItem 
-                 label="Новости" 
-                 icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
-                 active={activeTab === 'news' && !selectedNews} 
-                 onClick={() => handleTabChange('news')} 
-               />
-
-               <div className="my-2 border-t border-gray-100 mx-2"></div>
-
-               <button 
-                 onClick={() => setIsCatalogOpen(true)}
-                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm text-secondary hover:bg-gray-50 hover:text-dark"
-               >
-                 <div className="text-gray-400">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                 </div>
-                 Весь каталог
-               </button>
-            </nav>
-
-            {/* Business Partner Banner */}
-            <div 
-              onClick={() => setIsPartnerModalOpen(true)}
-              className="bg-dark rounded-2xl p-5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-dark/20 transition-transform hover:-translate-y-1"
-            >
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-white/10"></div>
-               <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/20 rounded-full blur-2xl -ml-10 -mb-10"></div>
-
-               <div className="relative z-10">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 block">Бизнес</span>
-                  <h3 className="font-bold text-lg leading-tight mb-2">Подключите свой бизнес</h3>
-                  <p className="text-xs text-gray-400 mb-4 line-clamp-3">Кинотеатры, бани, услуги. Онлайн-бронирование.</p>
-                  <button className="w-full bg-white/10 hover:bg-white text-white hover:text-dark text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
-                    Стать партнером
-                  </button>
-               </div>
-            </div>
-
-          </aside>
-
-          {/* MAIN CONTENT AREA */}
-          <main className="flex-grow min-w-0">
-             
-             {/* Header / Search (Desktop) */}
-             <div className="hidden lg:flex justify-between items-center mb-8 bg-surface p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div className="relative w-full max-w-md">
-                   <input 
-                     type="text" 
-                     placeholder="Поиск по объявлениям, товарам..."
-                     value={searchQuery}
-                     onChange={e => setSearchQuery(e.target.value)}
-                     className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                   />
-                   <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </div>
-                <div className="flex items-center gap-4">
-                   <button 
-                     onClick={() => setIsCreateModalOpen(true)}
-                     className="bg-dark text-white hover:bg-black px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-lg shadow-dark/20 flex items-center gap-2"
-                   >
-                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                     Подать объявление
-                   </button>
-                   
-                   <div className="h-8 w-px bg-gray-200 mx-2"></div>
-
-                   {user ? (
-                      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsUserProfileOpen(true)}>
-                         <div className="text-right">
-                            <p className="text-sm font-bold text-dark">{user.name}</p>
-                            <p className="text-xs text-secondary">{user.isAdmin ? 'Администратор' : user.managedShopId ? (user.managedShopId.startsWith('cinema') ? 'Кинотеатр' : 'Владелец') : 'Личный кабинет'}</p>
-                         </div>
-                         <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-hidden">
-                            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : user.name?.charAt(0) || user.email.charAt(0)}
-                         </div>
-                      </div>
-                   ) : (
-                      <button 
-                        onClick={() => setIsLoginOpen(true)}
-                        className="font-bold text-dark hover:text-primary transition-colors flex items-center gap-2"
-                      >
-                        Войти
-                      </button>
-                   )}
-                </div>
-             </div>
-
-             {/* Subcategory Chips (Horizontal Scroll) */}
-             {activeCatalogCategory && !selectedAd && !selectedShop && !selectedNews && (
-                <div className="mb-6 overflow-x-auto pb-2 no-scrollbar animate-fade-in-up">
-                    <div className="flex gap-2">
-                        <button
-                           onClick={() => setSubCategoryFilter('')}
-                           className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all border ${!subCategoryFilter ? 'bg-dark text-white border-dark shadow-md' : 'bg-white text-secondary border-gray-200 hover:border-primary hover:text-primary'}`}
-                        >
-                            Все
-                        </button>
-                        {subCategories.map(sub => (
-                            <button
-                                key={sub}
-                                onClick={() => setSubCategoryFilter(sub)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all border ${subCategoryFilter === sub ? 'bg-dark text-white border-dark shadow-md' : 'bg-white text-secondary border-gray-200 hover:border-primary hover:text-primary'}`}
-                            >
-                                {sub}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-             )}
-
-             {/* Advanced Filters (Conditional) */}
-             {!selectedAd && !selectedShop && !selectedNews && (showCarFilters || showRealEstateFilters || isGoodsCategory) && (
-                <div className="mb-6 bg-surface p-4 rounded-2xl border border-gray-100 shadow-sm animate-fade-in-up">
-                    <div className="flex flex-wrap gap-4 items-end">
-                        <div>
-                            <label className="text-xs font-bold text-secondary mb-1 block">Цена, ₽</label>
-                            <div className="flex gap-2">
-                                <input 
-                                    type="number" 
-                                    placeholder="От" 
-                                    value={filters.minPrice}
-                                    onChange={e => setFilters({...filters, minPrice: e.target.value})}
-                                    className="w-28 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                />
-                                <input 
-                                    type="number" 
-                                    placeholder="До" 
-                                    value={filters.maxPrice}
-                                    onChange={e => setFilters({...filters, maxPrice: e.target.value})}
-                                    className="w-28 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                />
-                            </div>
-                        </div>
-                        
-                        {showCarFilters && (
-                            <>
-                                <div>
-                                    <label className="text-xs font-bold text-secondary mb-1 block">Год выпуска</label>
-                                    <input 
-                                        type="number" 
-                                        placeholder="От 2010" 
-                                        value={filters.minYear}
-                                        onChange={e => setFilters({...filters, minYear: e.target.value})}
-                                        className="w-28 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-secondary mb-1 block">Пробег до, км</label>
-                                    <input 
-                                        type="number" 
-                                        placeholder="150000" 
-                                        value={filters.maxMileage}
-                                        onChange={e => setFilters({...filters, maxMileage: e.target.value})}
-                                        className="w-28 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                    />
-                                </div>
-                            </>
-                        )}
-
-                        {showRealEstateFilters && (
-                             <>
-                                <div>
-                                    <label className="text-xs font-bold text-secondary mb-1 block">Комнат</label>
-                                    <input 
-                                        type="number" 
-                                        placeholder="От 1" 
-                                        value={filters.minRooms}
-                                        onChange={e => setFilters({...filters, minRooms: e.target.value})}
-                                        className="w-20 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-secondary mb-1 block">Этаж</label>
-                                    <input 
-                                        type="number" 
-                                        placeholder="Любой" 
-                                        value={filters.floor}
-                                        onChange={e => setFilters({...filters, floor: e.target.value})}
-                                        className="w-20 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none" 
-                                    />
-                                </div>
-                             </>
-                        )}
-
-                        {isGoodsCategory && (
-                            <div>
-                                <label className="text-xs font-bold text-secondary mb-1 block">Состояние</label>
-                                <select 
-                                    value={filters.condition}
-                                    onChange={e => setFilters({...filters, condition: e.target.value})}
-                                    className="w-32 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-sm outline-none cursor-pointer" 
-                                >
-                                    <option value="">Любое</option>
-                                    <option value="new">Новое</option>
-                                    <option value="used">Б/У</option>
-                                </select>
-                            </div>
-                        )}
-                        
-                        <button onClick={() => setFilters({ minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' })} className="text-xs text-primary font-bold underline pb-2">
-                            Сбросить
-                        </button>
-                    </div>
-                </div>
-             )}
-
-             {/* Dynamic Content */}
-             {selectedAd ? (
-               <AdPage 
-                  ad={selectedAd} 
-                  onBack={() => setSelectedAd(null)}
-                  onAddReview={handleAddReview}
-               />
-             ) : selectedShop ? (
-                <ShopPage
-                    shop={selectedShop}
-                    onBack={() => setSelectedShop(null)}
-                    variant={activeTab === 'cafes' ? 'cafe' : 'shop'}
-                    onProductClick={setSelectedProduct}
-                />
-             ) : selectedNews ? (
-                <NewsPage 
-                    news={selectedNews} 
-                    onBack={() => setSelectedNews(null)} 
-                />
-             ) : activeTab === 'news' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up">
-                   {news.map(n => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => setSelectedNews(n)}
-                        className="group bg-surface rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100 flex flex-col"
-                      >
-                         <div className="h-48 overflow-hidden relative">
-                            <img src={n.image} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute top-4 left-4">
-                               <span className="bg-surface/90 backdrop-blur text-dark text-xs font-bold px-3 py-1 rounded-full">{n.category}</span>
-                            </div>
-                         </div>
-                         <div className="p-6 flex-grow flex flex-col">
-                            <span className="text-xs text-secondary mb-2 block">{n.date}</span>
-                            <h3 className="text-xl font-bold text-dark mb-3 leading-tight group-hover:text-primary transition-colors">{n.title}</h3>
-                            <p className="text-secondary text-sm line-clamp-3 mb-4 flex-grow">{n.excerpt}</p>
-                            <span className="text-primary font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform w-fit">
-                               Читать далее 
-                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                            </span>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-             ) : activeTab === 'shops' ? (
-                 <div className="animate-fade-in-up">
-                    <h2 className="text-2xl font-bold text-dark mb-6">Магазины Снежинска</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                        {shops.map(shop => (
-                            <ShopCard 
-                                key={shop.id} 
-                                shop={shop} 
-                                onClick={setSelectedShop}
-                            />
-                        ))}
-                    </div>
-                 </div>
-             ) : activeTab === 'cafes' ? (
-                <div className="animate-fade-in-up">
-                   <h2 className="text-2xl font-bold text-dark mb-6">Кафе и Рестораны</h2>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                       {cafes.map(cafe => (
-                           <ShopCard 
-                               key={cafe.id} 
-                               shop={cafe} 
-                                onClick={setSelectedShop}
-                           />
-                       ))}
-                   </div>
-                </div>
-             ) : activeTab === 'cinema' ? (
-                <div className="animate-fade-in-up">
-                   <h2 className="text-2xl font-bold text-dark mb-6 flex items-center gap-2">
-                       Кинотеатр "Космос" <span className="text-sm font-normal text-secondary bg-gray-100 px-2 py-1 rounded-lg">Сегодня</span>
-                   </h2>
-
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                       {movies.map(movie => (
-                           <div 
-                             key={movie.id}
-                             onClick={() => setSelectedMovie(movie)}
-                             className="group relative bg-surface rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer border border-gray-100 flex flex-col h-full"
-                           >
-                               <div className="aspect-[2/3] relative overflow-hidden">
-                                   <img src={movie.image} alt={movie.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                   <div className="absolute top-4 left-4">
-                                       <span className="bg-black/70 backdrop-blur text-white text-xs font-bold px-2 py-1 rounded">{movie.ageLimit}</span>
-                                   </div>
-                                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                                       <div className="flex items-center gap-2 text-white/90 text-sm font-bold">
-                                           <span className="text-yellow-400">★ {movie.rating}</span>
-                                           <span>•</span>
-                                           <span className="truncate">{movie.genre}</span>
-                                       </div>
-                                   </div>
-                               </div>
-                               <div className="p-5 flex-grow flex flex-col">
-                                   <h3 className="text-xl font-bold text-dark mb-2 leading-tight group-hover:text-primary transition-colors">{movie.title}</h3>
-                                   <div className="flex flex-wrap gap-2 mt-auto">
-                                       {movie.showtimes.slice(0, 3).map(time => (
-                                           <span key={time} className="bg-gray-100 text-dark text-sm font-medium px-3 py-1 rounded-lg border border-gray-200">
-                                               {time}
-                                           </span>
-                                       ))}
-                                       <span className="bg-primary text-white text-sm font-bold px-3 py-1 rounded-lg flex items-center ml-auto">
-                                           от {movie.price}₽
-                                       </span>
-                                   </div>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-                </div>
-             ) : (
-                <>
-                   {/* Mobile Create Ad Button (Floating) */}
-                   <button 
-                     onClick={() => setIsCreateModalOpen(true)}
-                     className="lg:hidden fixed bottom-6 right-6 z-30 bg-dark text-white p-4 rounded-full shadow-2xl shadow-dark/40 active:scale-90 transition-transform"
-                   >
-                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                   </button>
-                   
-                   {/* Active Filter Indicator */}
-                   {subCategoryFilter && (
-                      <div className="flex items-center gap-2 mb-4 animate-fade-in-up">
-                         <span className="text-secondary text-sm">Фильтр:</span>
-                         <div className="bg-primary text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
-                            {subCategoryFilter}
-                            <button onClick={() => setSubCategoryFilter('')} className="hover:text-white/80">
-                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                         </div>
-                      </div>
-                   )}
-
-                   <div className="animate-fade-in-up space-y-10">
-                      {/* VIP Section */}
-                      {premiumAds.length > 0 && (
-                        <div>
-                           <h2 className="text-xl font-extrabold mb-4 flex items-center gap-2 text-dark">
-                              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-400 text-yellow-900 shadow-md">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                              </span>
-                              VIP Объявления
-                           </h2>
-                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {premiumAds.map(ad => (
-                                 <AdCard 
-                                   key={ad.id} 
-                                   ad={ad} 
-                                   onShow={(ad) => setSelectedAd(ad)} 
-                                   isFavorite={favorites.includes(ad.id)}
-                                   onToggleFavorite={toggleFavorite}
-                                 />
-                              ))}
-                           </div>
-                        </div>
-                      )}
-
-                      {/* Standard Section */}
-                      {standardAds.length > 0 && (
-                        <div>
-                           {premiumAds.length > 0 && <h2 className="text-lg font-bold mb-4 text-dark flex items-center gap-2">Все предложения</h2>}
-                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {standardAds.map(ad => (
-                                 <AdCard 
-                                   key={ad.id} 
-                                   ad={ad} 
-                                   onShow={(ad) => setSelectedAd(ad)} 
-                                   isFavorite={favorites.includes(ad.id)}
-                                   onToggleFavorite={toggleFavorite}
-                                 />
-                              ))}
-                           </div>
-                        </div>
-                      )}
-                   </div>
-                   
-                   {filteredAds.length === 0 && (
-                      <div className="text-center py-20">
-                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                         </div>
-                         <h3 className="text-xl font-bold text-dark mb-2">Ничего не найдено</h3>
-                         <p className="text-secondary max-w-xs mx-auto">Попробуйте изменить категорию или поисковый запрос</p>
-                         <button onClick={() => {setSearchQuery(''); setFilters({ minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' }); handleTabChange('all');}} className="mt-6 text-primary font-bold hover:underline">
-                            Сбросить фильтры
-                         </button>
-                      </div>
-                   )}
-                </>
-             )}
-
-          </main>
-        </div>
+            <span className="text-[10px] font-medium text-dark mt-1">Подать</span>
+         </button>
+         <button onClick={() => { setIsUserProfileOpen(true); }} className="flex flex-col items-center gap-1 text-gray-400">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+            <span className="text-[10px] font-medium">Избранное</span>
+         </button>
+         <button onClick={() => { if(user) setIsUserProfileOpen(true); else setIsLoginOpen(true); }} className="flex flex-col items-center gap-1 text-gray-400">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <span className="text-[10px] font-medium">Профиль</span>
+         </button>
       </div>
 
-      {/* Floating Cart Button */}
-      {cart.length > 0 && (
-        <button 
-          onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 lg:right-10 z-50 bg-primary text-white p-4 rounded-full shadow-2xl shadow-primary/40 active:scale-95 transition-transform animate-fade-in-up"
-        >
-          <div className="relative">
-             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-             <span className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
-                {cart.length}
-             </span>
-          </div>
-        </button>
-      )}
+      {/* Main Page Content */}
+      <div className="container mx-auto px-4 py-6">
+         
+         {!selectedAd && !selectedShop && !selectedNews && (
+             <div className="lg:hidden mb-6">
+                 <StoriesBar stories={INITIAL_STORIES} onOpenShop={handleOpenShopFromStory} />
+             </div>
+         )}
 
-      <CreateAdModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
-        onSubmit={handleCreateAd}
-        catalog={SERVICE_CATALOG}
-      />
+         {!selectedAd && !selectedShop && !selectedNews && activeTab === 'all' && (
+            <div className="lg:hidden grid grid-cols-4 gap-2 mb-6">
+                <button onClick={() => handleTabChange('shops')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-1.5 text-purple-600">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-dark">Магазины</span>
+                </button>
+                <button onClick={() => handleTabChange('cafes')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mb-1.5 text-orange-600">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /></svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-dark">Кафе</span>
+                </button>
+                <button onClick={() => handleTabChange('cinema')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-1.5 text-red-600">
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-dark">Кино</span>
+                </button>
+                <button onClick={() => handleTabChange('news')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-1.5 text-blue-600">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-dark">Новости</span>
+                </button>
+            </div>
+         )}
 
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-      />
-      
-      {/* New User Profile Modal */}
+         <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar */}
+            <aside className="hidden lg:block w-64 flex-shrink-0 space-y-6 sticky top-24 h-fit">
+               <div className="bg-surface rounded-2xl shadow-sm border border-gray-100 p-2 space-y-1">
+                  {SERVICE_CATALOG.map((cat) => (
+                    <SidebarItem key={cat.id} label={cat.label} active={activeTab === cat.id} onClick={() => handleTabChange(cat.id)} icon={
+                        cat.id === 'sale' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> :
+                        cat.id === 'rent' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> :
+                        cat.id === 'services' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> :
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    } />
+                  ))}
+                  <div className="my-2 border-t border-gray-100"></div>
+                  <SidebarItem label="Магазины" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>} active={activeTab === 'shops'} onClick={() => handleTabChange('shops')} />
+                  <SidebarItem label="Кафе и Еда" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /></svg>} active={activeTab === 'cafes'} onClick={() => handleTabChange('cafes')} />
+                  <SidebarItem label="Кинотеатр" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>} active={activeTab === 'cinema'} onClick={() => handleTabChange('cinema')} />
+                  <SidebarItem label="Новости" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} active={activeTab === 'news'} onClick={() => handleTabChange('news')} />
+               </div>
+               <div onClick={() => setIsPartnerModalOpen(true)} className="bg-gradient-to-br from-dark to-black rounded-2xl p-6 text-white cursor-pointer shadow-lg transform hover:-translate-y-1 transition-all group">
+                  <h3 className="font-bold text-lg mb-2">Для бизнеса</h3>
+                  <p className="text-sm text-gray-300 mb-4">Подключите магазин или услуги к платформе</p>
+                  <button className="bg-white text-dark text-xs font-bold px-4 py-2 rounded-lg group-hover:bg-gray-100 transition-colors">Подключить</button>
+               </div>
+               <div className="text-xs text-center text-gray-400">
+                  &copy; 2024 Твой Снежинск<br/><a href="#" className="hover:underline">Политика конфиденциальности</a>
+               </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <main className="flex-grow min-w-0">
+               {/* Subcategories */}
+               {!selectedAd && !selectedShop && !selectedNews && subCategories.length > 0 && (
+                  <div className="hidden lg:flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+                     <button onClick={() => setSubCategoryFilter('')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${!subCategoryFilter ? 'bg-dark text-white border-dark' : 'bg-white text-secondary border-gray-200 hover:border-gray-300'}`}>Все</button>
+                     {subCategories.map(sub => (
+                        <button key={sub} onClick={() => setSubCategoryFilter(sub)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${subCategoryFilter === sub ? 'bg-dark text-white border-dark' : 'bg-white text-secondary border-gray-200 hover:border-gray-300'}`}>{sub}</button>
+                     ))}
+                  </div>
+               )}
+
+               {/* View Switching */}
+               {selectedAd ? (
+                  <AdPage 
+                      ad={selectedAd} 
+                      onBack={() => setSelectedAd(null)} 
+                      onAddReview={handleAddReview}
+                      onOpenChat={(session) => setActiveChat(session)} 
+                  />
+               ) : selectedNews ? (
+                  <NewsPage news={selectedNews} onBack={() => setSelectedNews(null)} />
+               ) : selectedShop ? (
+                  <ShopPage shop={selectedShop} onBack={() => { setSelectedShop(null); handleTabChange('all'); }} variant={selectedShop.id.includes('c') ? 'cafe' : 'shop'} onProductClick={(p) => setSelectedProduct(p)} />
+               ) : (
+                  <div className="space-y-6 animate-fade-in-up">
+                     {/* News Grid */}
+                     {activeTab === 'news' ? (
+                         <div className="grid grid-cols-1 gap-6">
+                             {news.map(item => (
+                                 <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all flex flex-col md:flex-row group h-full md:h-56">
+                                     <div className="md:w-1/3 h-48 md:h-full relative overflow-hidden">
+                                         <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                         <span className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wide">{item.category}</span>
+                                     </div>
+                                     <div className="p-6 md:w-2/3 flex flex-col justify-between">
+                                         <div>
+                                             <div className="flex items-center gap-2 text-xs text-gray-400 mb-2"><span>{item.date}</span><span>•</span><span>2 мин чтения</span></div>
+                                             <h3 className="text-xl font-bold text-dark mb-2 leading-tight group-hover:text-primary transition-colors">{item.title}</h3>
+                                             <p className="text-secondary text-sm line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
+                                         </div>
+                                         <span className="text-primary font-bold text-sm mt-4 inline-block hover:underline">Читать далее →</span>
+                                     </div>
+                                 </div>
+                             ))}
+                         </div>
+                     ) : activeTab === 'shops' || activeTab === 'cafes' ? (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                             {(activeTab === 'shops' ? shops : cafes).map(shop => (
+                                 <ShopCard key={shop.id} shop={shop} onClick={setSelectedShop} />
+                             ))}
+                         </div>
+                     ) : activeTab === 'cinema' ? (
+                         <div className="space-y-8">
+                             <div className="relative h-48 md:h-64 rounded-3xl overflow-hidden shadow-lg">
+                                 <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200" className="w-full h-full object-cover" />
+                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                     <div className="text-center text-white">
+                                         <h2 className="text-3xl md:text-4xl font-bold mb-2">Кинотеатр "Космос"</h2>
+                                         <p className="text-lg opacity-90">Премьеры этой недели</p>
+                                     </div>
+                                 </div>
+                             </div>
+                             <h3 className="text-2xl font-bold text-dark pl-2 border-l-4 border-primary">Сегодня в прокате</h3>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                 {movies.map(movie => (
+                                     <div key={movie.id} className="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-xl transition-all">
+                                         <div className="relative aspect-[2/3] overflow-hidden">
+                                             <img src={movie.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                             <div className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow-sm">{movie.ageLimit}</div>
+                                             <div className="absolute top-2 right-2 bg-yellow-400 text-dark text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1"><span>★</span> {movie.rating}</div>
+                                         </div>
+                                         <div className="p-4 flex-grow flex flex-col">
+                                             <h4 className="font-bold text-lg text-dark mb-1 leading-tight">{movie.title}</h4>
+                                             <p className="text-xs text-secondary mb-3">{movie.genre}</p>
+                                             <div className="flex flex-wrap gap-2 mt-auto mb-4">
+                                                 {movie.showtimes.map(time => (
+                                                     <span key={time} className="bg-gray-100 text-dark text-xs font-bold px-2 py-1 rounded border border-gray-200">{time}</span>
+                                                 ))}
+                                             </div>
+                                             <button onClick={() => setSelectedMovie(movie)} className="w-full bg-dark text-white py-2 rounded-xl font-bold text-sm hover:bg-black transition-colors">Купить билет</button>
+                                         </div>
+                                     </div>
+                                 ))}
+                             </div>
+                         </div>
+                     ) : (
+                         <>
+                             {premiumAds.length > 0 && !searchQuery && !subCategoryFilter && (
+                                 <div className="mb-8">
+                                     <h2 className="text-lg font-bold text-dark mb-4 flex items-center gap-2">
+                                         <span className="text-yellow-500">★</span> VIP объявления
+                                     </h2>
+                                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+                                         {premiumAds.map(ad => (
+                                             <div key={ad.id} className="h-full">
+                                                 <AdCard ad={ad} onShow={setSelectedAd} variant="premium" isFavorite={favorites.includes(ad.id)} onToggleFavorite={toggleFavorite} />
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </div>
+                             )}
+                             <div>
+                                 <h2 className="text-lg font-bold text-dark mb-4">
+                                     {searchQuery ? 'Результаты поиска' : 'Свежие объявления'}
+                                 </h2>
+                                 {standardAds.length === 0 && premiumAds.length === 0 ? (
+                                     <div className="text-center py-20 text-secondary">
+                                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">😔</div>
+                                         <p className="text-lg font-medium">Ничего не найдено</p>
+                                         <p className="text-sm">Попробуйте изменить параметры поиска</p>
+                                     </div>
+                                 ) : (
+                                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+                                         {(searchQuery || subCategoryFilter || filters.maxPrice ? filteredAds : standardAds).map(ad => (
+                                             <div key={ad.id} className="h-full">
+                                                 <AdCard ad={ad} onShow={setSelectedAd} isFavorite={favorites.includes(ad.id)} onToggleFavorite={toggleFavorite} />
+                                             </div>
+                                         ))}
+                                     </div>
+                                 )}
+                             </div>
+                         </>
+                     )}
+                  </div>
+               )}
+            </main>
+         </div>
+      </div>
+
+      <CreateAdModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateAd} catalog={SERVICE_CATALOG} />
+      <PartnerModal isOpen={isPartnerModalOpen} onClose={() => setIsPartnerModalOpen(false)} />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <ServiceCatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} catalog={SERVICE_CATALOG} onSelect={(cat, sub) => { handleTabChange(cat); setSubCategoryFilter(sub); }} initialCategory={activeTab === 'news' || activeTab === 'all' ? 'sale' : activeTab as Category} />
       {user && (
-          <UserProfileModal
-            isOpen={isUserProfileOpen}
-            onClose={() => setIsUserProfileOpen(false)}
-            user={user}
-            favorites={favorites}
-            allAds={ads}
-            onLogout={async () => {
-              if (supabase) {
-                await supabase.auth.signOut();
-              } else {
-                setUser(null);
-                localStorage.removeItem('snezhinsk_user');
-              }
-              setIsUserProfileOpen(false); 
-              addNotification('Вы вышли из системы');
-            }}
-            onToggleFavorite={toggleFavorite}
-            onShowAd={setSelectedAd}
-            onUpdateUser={handleUpdateUser}
-            onOpenAdminPanel={() => { setIsAdminPanelOpen(true); setIsUserProfileOpen(false); }}
-            onOpenMerchantDashboard={() => { setIsMerchantDashboardOpen(true); setIsUserProfileOpen(false); }}
-          />
+          <UserProfileModal isOpen={isUserProfileOpen} onClose={() => setIsUserProfileOpen(false)} user={user} onLogout={async () => { if(supabase) await supabase.auth.signOut(); setUser(null); }} favorites={favorites} allAds={ads} onToggleFavorite={toggleFavorite} onShowAd={setSelectedAd} onUpdateUser={handleUpdateUser} onOpenAdminPanel={() => { setIsUserProfileOpen(false); setIsAdminPanelOpen(true); }} onOpenMerchantDashboard={() => { setIsUserProfileOpen(false); setIsMerchantDashboardOpen(true); if (user.managedShopId) { const shop = allShops.find(s => s.id === user.managedShopId); if (shop) setSelectedShop(shop); } }} />
       )}
-      
-      {/* Admin Panel */}
-      <AdminPanel 
-          isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
-          ads={ads}
-          onUpdateAdStatus={handleUpdateAdStatus}
-          onUpdateAdContent={handleUpdateAdContent}
-          onAddNews={handleAddNews}
-      />
-
-      <ServiceCatalogModal
-         isOpen={isCatalogOpen}
-         onClose={() => setIsCatalogOpen(false)}
-         catalog={SERVICE_CATALOG}
-         initialCategory={activeTab === 'cinema' || activeTab === 'shops' || activeTab === 'cafes' || activeTab === 'news' ? 'sale' : activeTab as Category}
-         onSelect={(cat, sub) => {
-            setActiveTab(cat);
-            setSubCategoryFilter(sub);
-            setIsCatalogOpen(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-         }}
-      />
-      
-      <MovieBookingModal
-        isOpen={!!selectedMovie}
-        onClose={() => setSelectedMovie(null)}
-        movie={selectedMovie}
-      />
-
-      <PartnerModal
-        isOpen={isPartnerModalOpen}
-        onClose={() => setIsPartnerModalOpen(false)}
-      />
-
+      {user && user.isAdmin && (
+          <AdminPanel isOpen={isAdminPanelOpen} onClose={() => setIsAdminPanelOpen(false)} ads={ads} onUpdateAdStatus={handleUpdateAdStatus} onUpdateAdContent={handleUpdateAdContent} onAddNews={handleAddNews} />
+      )}
       {user && user.managedShopId && (
-        <MerchantDashboard
-          isOpen={isMerchantDashboardOpen}
-          onClose={() => setIsMerchantDashboardOpen(false)}
-          shop={shops.find(s => s.id === user.managedShopId) || shops[0]}
-          onUpdateShop={handleUpdateShop}
-          movies={movies}
-          onUpdateMovies={setMovies}
-        />
+          <MerchantDashboard isOpen={isMerchantDashboardOpen} onClose={() => setIsMerchantDashboardOpen(false)} shop={allShops.find(s => s.id === user.managedShopId) || shops[0]} onUpdateShop={(updated) => { if (updated.id.includes('c') && !updated.id.includes('cinema')) { } else { handleUpdateShop(updated); } }} movies={user.managedShopId.includes('cinema') ? movies : undefined} onUpdateMovies={user.managedShopId.includes('cinema') ? setMovies : undefined} />
       )}
-
-      <ProductDetailsModal
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        product={selectedProduct}
-        onAddToCart={(p, q) => addToCart(p, q, selectedShop?.id)}
-      />
-
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cart}
-        shops={allShops}
-        onUpdateQuantity={updateCartQuantity}
-        onRemove={removeFromCart}
-      />
-
+      <MovieBookingModal isOpen={!!selectedMovie} onClose={() => setSelectedMovie(null)} movie={selectedMovie} />
+      <ProductDetailsModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onAddToCart={addToCart} />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} shops={allShops} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} />
     </div>
   );
 }
