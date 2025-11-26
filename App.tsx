@@ -19,10 +19,12 @@ import { StoriesBar } from './components/StoriesBar';
 import { UserProfileModal } from './components/UserProfileModal';
 import { ToastNotification } from './components/ToastNotification';
 import { AdminPanel } from './components/AdminPanel';
+import { MobileMenu } from './components/MobileMenu';
+import { MobileSearchModal } from './components/MobileSearchModal';
 import { supabase } from './services/supabaseClient';
 import { formatPhoneNumber } from './utils';
 
-// ... (KEEP INITIAL DATA AS IS - Assumed to be in context) ...
+// ... (KEEP INITIAL DATA AS IS) ...
 const INITIAL_ADS: Ad[] = [
   {
     id: '1',
@@ -195,11 +197,44 @@ const INITIAL_ADS: Ad[] = [
   }
 ];
 
+const TAXI_SERVICES = [
+  { id: 't1', name: 'Яндекс Go', phone: '', link: 'https://go.yandex.ru/', description: 'Быстрая подача, оплата картой', icon: '🚕' },
+  { id: 't2', name: 'Везёт', phone: '+7 (35146) 3-33-33', description: 'Городское такси, эконом', icon: '🚙' },
+  { id: 't3', name: 'Снежинское', phone: '+7 (35146) 9-22-22', description: 'Надежное такси, трансферы', icon: '🚖' },
+  { id: 't4', name: 'Максим', phone: '+7 (35146) 2-22-22', description: 'Заказ через оператора', icon: '🚗' },
+];
+
+const EMERGENCY_NUMBERS = [
+  { id: 'e1', name: 'Единая служба спасения', phone: '112', desc: 'С мобильного' },
+  { id: 'e2', name: 'Пожарная охрана', phone: '101', desc: 'С мобильного (01 с городского)' },
+  { id: 'e3', name: 'Полиция', phone: '102', desc: 'С мобильного (02 с городского)' },
+  { id: 'e4', name: 'Скорая помощь', phone: '103', desc: 'С мобильного (03 с городского)' },
+  { id: 'e5', name: 'Газовая служба', phone: '104', desc: 'С мобильного (04 с городского)' },
+  { id: 'e6', name: 'Приемный покой (Хирургия)', phone: '+7 (35146) 3-33-03', desc: 'Круглосуточно' },
+  { id: 'e7', name: 'Аварийная ЖКХ (Сервис)', phone: '+7 (35146) 9-25-25', desc: 'Круглосуточно' },
+  { id: 'e8', name: 'Единая диспетчерская (ЕДДС)', phone: '+7 (35146) 2-63-33', desc: 'Круглосуточно' },
+];
+
+const MEDICINE_SERVICES = [
+  { id: 'med1', name: 'ЦМСЧ №15', address: 'ул. Дзержинского, 13', phone: '+7 (35146) 9-23-33', description: 'Городская поликлиника, запись к врачам', image: 'https://images.unsplash.com/photo-1581056771107-24ca5f033842?auto=format&fit=crop&w=800' },
+  { id: 'med2', name: 'Инвитро', address: 'ул. Васильева, 19', phone: '+7 (800) 200-36-30', description: 'Медицинские анализы, УЗИ', image: 'https://images.unsplash.com/photo-1579684385180-1ea55f9f4985?auto=format&fit=crop&w=800' },
+  { id: 'med3', name: 'Стоматология "Жемчуг"', address: 'ул. Свердлова, 28', phone: '+7 (35146) 3-00-55', description: 'Лечение зубов, протезирование', image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800' },
+  { id: 'med4', name: 'Аптека "Живика"', address: 'пр. Мира, 20', phone: '+7 (35146) 2-15-15', description: 'Лекарства, косметика, медтехника', image: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=800' },
+  { id: 'med5', name: 'Ветеринарная клиника', address: 'ул. Транспортная, 10', phone: '+7 (35146) 2-55-22', description: 'Лечение животных, прививки', image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800' },
+];
+
+const CULTURE_PLACES = [
+  { id: 'cul1', name: 'Дворец Культуры "Октябрь"', address: 'пл. Ленина', phone: '+7 (35146) 9-29-29', description: 'Концерты, спектакли, кружки', image: 'https://images.unsplash.com/photo-1514306191717-452ec28c7f31?auto=format&fit=crop&w=800' },
+  { id: 'cul2', name: 'Городской Музей', address: 'пр. Мира, 22', phone: '+7 (35146) 2-00-01', description: 'История города, выставки художников', image: 'https://images.unsplash.com/photo-1545562083-c583d014b267?auto=format&fit=crop&w=800' },
+  { id: 'cul3', name: 'Библиотека им. Горького', address: 'ул. Ленина, 6', phone: '+7 (35146) 3-55-11', description: 'Книги, лектории, мастер-классы', image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=800' },
+  { id: 'cul4', name: 'Парк Культуры и Отдыха', address: 'ул. 40 лет Октября', phone: '', description: 'Аттракционы, прогулочные зоны, праздники', image: 'https://images.unsplash.com/photo-1571407921588-446738996fe5?auto=format&fit=crop&w=800' },
+];
+
 const INITIAL_STORIES: Story[] = [
   { id: '1', shopId: 's1', shopName: 'Клондайк', avatar: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=100', image: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=800', text: 'Скидки на краску до 30%!' },
   { id: '2', shopId: 'c1', shopName: 'Олива', avatar: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100', image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800', text: 'Новое меню бизнес-ланчей 🍕' },
   { id: '3', shopId: 's2', shopName: 'Цветы', avatar: 'https://images.unsplash.com/photo-1562521151-54b609c25841?w=100', image: 'https://images.unsplash.com/photo-1557929036-f60e326e3c1a?w=800', text: 'Свежая поставка пионов!' },
-  { id: '4', shopId: 'k1', shopName: 'Кино', avatar: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100', image: 'https://avatars.mds.yandex.net/get-kinopoisk-image/10535692/d4050d27-6f01-49b0-9f1c-755106596131/1920x', text: 'Премьера сегодня в 19:00' },
+  { id: '4', shopId: 'cinema1', shopName: 'Кино', avatar: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100', image: 'https://avatars.mds.yandex.net/get-kinopoisk-image/10535692/d4050d27-6f01-49b0-9f1c-755106596131/1920x', text: 'Премьера сегодня в 19:00' },
   { id: '5', shopId: 's3', shopName: 'Универмаг', avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100', image: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=800', text: 'Финальная распродажа лета' },
 ];
 
@@ -233,6 +268,7 @@ const INITIAL_NEWS: NewsItem[] = [
   }
 ];
 
+// ... (KEEP MOVIES, SHOPS, CAFES AS IS) ...
 const INITIAL_MOVIES: Movie[] = [
   {
     id: 'm1',
@@ -267,6 +303,40 @@ const INITIAL_MOVIES: Movie[] = [
     showtimes: ['10:00', '12:00', '14:00'],
     price: 300
   }
+];
+
+const INITIAL_GYMS: Shop[] = [
+    {
+        id: 'gym1',
+        name: 'Физ-Ра',
+        description: 'Тренажерный зал, групповые программы, кардиозона, профессиональные тренеры. Сауна в раздевалке.',
+        logo: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300',
+        coverImage: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200',
+        address: 'ул. Васильева 30',
+        phone: '+7 (35146) 9-22-11',
+        workingHours: 'Пн-Вс: 08:00 - 22:00',
+        rating: 4.8,
+        products: [
+            { id: 'g1', title: 'Разовое посещение', price: 350, image: 'https://images.unsplash.com/photo-1576678927484-cc907957088c?w=400', description: 'Доступ ко всем тренажерам и сауне.' },
+            { id: 'g2', title: 'Абонемент на месяц', price: 2500, image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400', description: 'Безлимитное посещение тренажерного зала.' },
+            { id: 'g3', title: 'Персональная тренировка', price: 800, image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400', description: 'Занятие с тренером (60 мин).' },
+        ]
+    },
+    {
+        id: 'gym2',
+        name: 'Олимп',
+        description: 'Фитнес-клуб с бассейном. Аквааэробика, йога, пилатес. Детские секции.',
+        logo: 'https://images.unsplash.com/photo-1574680096141-1c57c502aa8f?w=300',
+        coverImage: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=1200',
+        address: 'ул. Ленина 10',
+        phone: '+7 (35146) 3-15-15',
+        workingHours: 'Пн-Вс: 07:00 - 23:00',
+        rating: 4.9,
+        products: [
+            { id: 'o1', title: 'Бассейн (разовое)', price: 400, image: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400', description: 'Сеанс плавания 45 мин.' },
+            { id: 'o2', title: 'Абонемент "Фитнес"', price: 3000, image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400', description: 'Групповые программы + тренажерный зал.' },
+        ]
+    }
 ];
 
 const INITIAL_SHOPS: Shop[] = [
@@ -348,473 +418,336 @@ const INITIAL_CAFES: Shop[] = [
         id: 'c1',
         name: 'Олива',
         description: 'Уютный семейный ресторан с итальянской кухней. Пицца из дровяной печи, домашняя паста и изысканные десерты. Есть детская комната.',
-        logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80',
-        coverImage: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1200&q=80',
-        address: 'ул. Ленина 14',
-        phone: '+7 (35146) 9 20 20',
+        logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300',
+        coverImage: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1200',
+        address: 'ул. Ленина 24',
+        phone: '+7 (35146) 9 44 44',
         workingHours: 'Пн-Вс: 11:00 - 23:00',
         rating: 4.9,
-        paymentConfig: { enabled: true, type: 'online' },
+        paymentConfig: { enabled: false, type: 'manual', phone: '+73514694444' },
         products: [
-            { id: 'm1', title: 'Пицца Пепперони', price: 650, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400', description: 'Классическая пицца с колбасками пепперони, моцареллой и томатным соусом. 30см.' },
-            { id: 'm2', title: 'Паста Карбонара', price: 480, image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400', description: 'Спагетти с беконом, сливочным соусом и пармезаном.' },
-            { id: 'm3', title: 'Салат Цезарь', price: 420, image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400', description: 'С куриным филе, сухариками, перепелиными яйцами и соусом цезарь.' },
-            { id: 'm4', title: 'Тирамису', price: 350, image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400', description: 'Традиционный итальянский десерт с маскарпоне и кофе.' },
+            { id: 'pizza1', title: 'Пицца Пепперони', price: 650, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400', description: 'Классическая пицца с колбасками пепперони и моцареллой.' },
+            { id: 'pasta1', title: 'Паста Карбонара', price: 450, image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400', description: 'Спагетти, бекон, сливки, пармезан, яйцо.' },
+            { id: 'soup1', title: 'Тыквенный суп', price: 320, image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400', description: 'Крем-суп из тыквы с семечками и гренками.' },
+             { id: 'drink1', title: 'Лимонад домашний', price: 200, image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400', description: 'Освежающий лимонад с мятой и лимоном.' },
         ]
     },
     {
         id: 'c2',
-        name: 'Coffee Like',
-        description: 'Кофе с собой, авторские напитки и свежая выпечка. Идеальное место для начала дня или короткой встречи.',
-        logo: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=300&q=80',
-        coverImage: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=1200&q=80',
-        address: 'пр. Мира 22 (у входа в парк)',
-        phone: '+7 (900) 555 44 33',
-        workingHours: 'Пн-Вс: 08:00 - 21:00',
-        rating: 4.7,
-        paymentConfig: { enabled: false, type: 'manual', phone: '+79005554433' },
+        name: 'Суши Хаус',
+        description: 'Доставка суши и роллов. Свежая рыба, большие порции. Быстрая доставка по городу.',
+        logo: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=300',
+        coverImage: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=1200',
+        address: 'ул. Васильева 10',
+        phone: '+7 (900) 500 00 00',
+        workingHours: 'Пн-Вс: 10:00 - 22:00',
+        rating: 4.6,
+        paymentConfig: { enabled: true, type: 'online' },
         products: [
-            { id: 'co1', title: 'Капучино Большой', price: 220, image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400', description: '400мл. Классический кофейный напиток на основе эспрессо с добавлением молока.' },
-            { id: 'co2', title: 'Латте Соленая карамель', price: 250, image: 'https://images.unsplash.com/photo-1570968992193-6e5c922e963c?w=400', description: 'Нежный кофейный напиток с сиропом соленая карамель.' },
-            { id: 'co3', title: 'Круассан с шоколадом', price: 150, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400', description: 'Свежеиспеченный круассан с шоколадной начинкой.' },
+            { id: 'sushi1', title: 'Филадельфия Лайт', price: 390, image: 'https://images.unsplash.com/photo-1617196019294-dc44df5b90e0?w=400', description: 'Лосось, сливочный сыр, огурец.' },
+             { id: 'sushi2', title: 'Калифорния с крабом', price: 350, image: 'https://images.unsplash.com/photo-1593560708920-63984dc36a79?w=400', description: 'Снежный краб, авокадо, огурец, икра масаго.' },
+            { id: 'set1', title: 'Сет "Запеченный"', price: 1100, image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400', description: 'Набор из 3-х популярных запеченных роллов. 24 шт.' },
         ]
     },
     {
         id: 'c3',
-        name: 'Суши Хаус',
-        description: 'Доставка суши и роллов. Большие порции, свежая рыба. Wok-лапша и супы. Быстрая доставка по городу.',
-        logo: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=300&q=80',
-        coverImage: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=1200&q=80',
-        address: 'ул. Васильева 8',
-        phone: '+7 (35146) 2 22 22',
-        workingHours: 'Пн-Вс: 10:00 - 22:30',
-        rating: 4.5,
-        paymentConfig: { enabled: false, type: 'manual', phone: '+73514622222' },
+        name: 'Кофейня "Зерно"',
+        description: 'Правильный кофе, свежая выпечка и уютная атмосфера. Завтраки весь день.',
+        logo: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=300',
+        coverImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1200',
+        address: 'ул. Ленина 6',
+        phone: '+7 (35146) 2 11 11',
+        workingHours: 'Пн-Пт: 07:30 - 21:00',
+        rating: 4.9,
+        paymentConfig: { enabled: false, type: 'manual', phone: '+73514621111' },
         products: [
-            { id: 's1', title: 'Сет Филадельфия', price: 1200, image: 'https://images.unsplash.com/photo-1617196019294-dcce47895545?w=400', description: 'Набор из 3 видов роллов Филадельфия: с огурцом, с авокадо и лайт. 24 шт.' },
-            { id: 's2', title: 'Ролл Калифорния', price: 350, image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400', description: 'Снежный краб, огурец, авокадо, икра масаго.' },
-            { id: 's3', title: 'Wok с курицей', price: 400, image: 'https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=400', description: 'Лапша удон с курицей, овощами и соусом терияки.' },
+            { id: 'cof1', title: 'Капучино', price: 180, image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400', description: 'Классический капучино. 300мл.' },
+            { id: 'bak1', title: 'Круассан с миндалем', price: 150, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400', description: 'Свежие круассан с миндальным кремом.' },
+            { id: 'bak2', title: 'Сырники', price: 250, image: 'https://images.unsplash.com/photo-1567327613485-fbc7bf196198?w=400', description: 'Домашние сырники со сметаной и джемом.' },
         ]
     }
 ];
 
-const SERVICE_CATALOG: CatalogCategory[] = [
+const CATALOG: CatalogCategory[] = [
   {
     id: 'sale',
-    label: 'Продажа',
+    label: 'Купить',
     groups: [
-      { name: 'Недвижимость', items: ['Квартиры', 'Комнаты', 'Дома, дачи', 'Гаражи', 'Земельные участки'] },
-      { name: 'Транспорт', items: ['Автомобили', 'Мотоциклы', 'Спецтехника', 'Запчасти'] },
+      { name: 'Транспорт', items: ['Автомобили', 'Мотоциклы', 'Запчасти', 'Гаражи'] },
+      { name: 'Недвижимость', items: ['Квартиры', 'Дома, дачи', 'Комнаты', 'Земельные участки'] },
       { name: 'Личные вещи', items: ['Одежда, обувь', 'Детская одежда', 'Часы и украшения'] },
-      { name: 'Электроника', items: ['Телефоны', 'Компьютеры', 'Бытовая техника'] },
-      { name: 'Хобби и отдых', items: ['Спорт и отдых', 'Книги', 'Музыкальные инструменты'] },
+      { name: 'Электроника', items: ['Телефоны', 'Ноутбуки', 'Бытовая техника', 'Фототехника'] },
+      { name: 'Для дома и дачи', items: ['Ремонт и стройка', 'Мебель', 'Растения', 'Инструменты'] },
     ]
   },
   {
     id: 'rent',
-    label: 'Аренда',
+    label: 'Снять',
     groups: [
-      { name: 'Недвижимость', items: ['Квартиры', 'Комнаты', 'Дома, дачи', 'Гаражи', 'Коммерческая'] },
-      { name: 'Транспорт', items: ['Автомобили', 'Прицепы'] },
-      { name: 'Оборудование', items: ['Инструмент', 'Строительное', 'Туристическое'] },
+      { name: 'Недвижимость', items: ['Квартиры', 'Дома, дачи', 'Комнаты', 'Помещения'] },
+      { name: 'Транспорт', items: ['Автомобили', 'Спецтехника'] },
     ]
   },
   {
     id: 'services',
     label: 'Услуги',
     groups: [
-      { name: 'Ремонт и стройка', items: ['Ремонт квартир', 'Сантехника', 'Электрика', 'Сборка мебели'] },
-      { name: 'Транспорт', items: ['Грузоперевозки', 'Переезды', 'Эвакуатор', 'Пассажирские перевозки'] },
-      { name: 'Красота и здоровье', items: ['Парикмахерские', 'Маникюр', 'Массаж'] },
-      { name: 'Компьютеры', items: ['Ремонт ПК', 'Настройка интернета'] },
-      { name: 'Обучение', items: ['Репетиторы', 'Курсы', 'Спорт секции'] },
+      { name: 'Ремонт', items: ['Ремонт квартир', 'Сантехника', 'Электрика', 'Сборка мебели'] },
+      { name: 'Красота', items: ['Маникюр', 'Парикмахер', 'Массаж'] },
+      { name: 'Обучение', items: ['Репетиторы', 'Курсы', 'Тренеры'] },
+      { name: 'Транспорт', items: ['Грузоперевозки', 'Такси', 'Аренда авто'] },
     ]
   },
   {
     id: 'jobs',
     label: 'Работа',
     groups: [
-      { name: 'Вакансии', items: ['Производство', 'Торговля', 'Строительство', 'Транспорт', 'Офис', 'Без опыта'] },
+      { name: 'Вакансии', items: ['Полный день', 'Подработка', 'Удаленная работа'] },
+      { name: 'Резюме', items: ['Ищу работу'] },
     ]
   }
 ];
 
-const mapAdFromDB = (item: any): Ad => ({
-    id: item.id,
-    userId: item.user_id, 
-    title: item.title,
-    description: item.description,
-    price: Number(item.price), 
-    category: item.category,
-    subCategory: item.sub_category,
-    contact: item.contact,
-    location: item.location,
-    image: item.image || 'https://via.placeholder.com/800x600?text=No+Image',
-    images: item.images || [item.image || 'https://via.placeholder.com/800x600?text=No+Image'],
-    isPremium: item.is_premium,
-    bookingAvailable: false,
-    date: item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : 'Недавно',
-    reviews: [],
-    specs: item.specs || {},
-    status: item.status || 'approved'
-});
+// Reused Navigation Items
+const NAV_ITEMS = [
+    { id: 'all', label: 'Главная', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
+    { id: 'news', label: 'Новости', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg> },
+    { id: 'taxi', label: 'Такси', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" /></svg> },
+    { id: 'gyms', label: 'Спортзалы', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg> },
+    { id: 'cafes', label: 'Еда', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> },
+    { id: 'shops', label: 'Магазины', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
+    { id: 'cinema', label: 'Кино', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg> },
+    { id: 'medicine', label: 'Медицина', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg> },
+    { id: 'culture', label: 'Культура', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg> },
+    { id: 'emergency', label: 'Экстренные', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> },
+];
 
-const mapSupabaseUser = (sbUser: any): User => {
-  const metadata = sbUser.user_metadata || {};
-  let isAdmin = false;
-  let managedShopId = undefined;
-  
-  if (sbUser.email === 'hrustalev_1974@mail.ru') isAdmin = true;
-  if (sbUser.email === 'shop@snezhinsk.ru') managedShopId = 's1';
-  if (sbUser.email === 'cinema@snezhinsk.ru') managedShopId = 'cinema1';
-
-  return {
-    id: sbUser.id,
-    email: sbUser.email,
-    phone: metadata.phone || '',
-    name: metadata.full_name || 'Пользователь',
-    isLoggedIn: true,
-    avatar: metadata.avatar_url,
-    isAdmin,
-    managedShopId
-  };
+// Mock user - in reality this would come from auth
+const DEFAULT_USER: User = {
+  id: 'guest',
+  email: 'guest@snezhinsk.ru',
+  isLoggedIn: false,
+  favorites: [],
+  orders: []
 };
 
-// SidebarItem Component
-const SidebarItem = ({ label, icon, active, onClick }: { label: string, icon: React.ReactNode, active: boolean, onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
-      ${active 
-        ? 'bg-primary text-white shadow-lg shadow-primary/30' 
-        : 'text-secondary hover:bg-gray-50 hover:text-dark'}`}
-  >
-    <div className={`${active ? 'text-white' : 'text-gray-400'}`}>{icon}</div>
-    {label}
-  </button>
-);
+// Improved helper to safely extract error messages
+const getSafeErrorMessage = (error: unknown): string => {
+    if (!error) return 'Неизвестная ошибка';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message;
+    
+    if (typeof error === 'object') {
+        const errObj = error as any;
+        // Check common Supabase/API error fields
+        if (errObj.message) return errObj.message;
+        if (errObj.error_description) return errObj.error_description;
+        if (errObj.details) return errObj.details;
+        if (errObj.msg) return errObj.msg;
+        if (errObj.code) return `Код ошибки: ${errObj.code}`;
+        
+        // Return generic message instead of risking [object Object] via bad stringification
+        return 'Ошибка соединения с сервером';
+    }
+    return String(error);
+};
 
-// SnezhikLogo Component
-const SnezhikLogo = ({ className = "w-10 h-10" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2v20M2 12h20" className="text-blue-300" />
-    <path d="M12 2v20" transform="rotate(45 12 12)" className="text-blue-300" />
-    <path d="M12 2v20" transform="rotate(-45 12 12)" className="text-blue-300" />
-    <path d="M12 2v4M12 22v-4M2 12h4M22 12h-4" className="text-blue-200" strokeWidth="3" />
-    <circle cx="12" cy="12" r="3" className="text-white fill-blue-50" />
-  </svg>
-);
-
-interface WeatherData {
-  temp: number;
-  condition: string;
-  wind: number;
-  pressure: number;
-  humidity: number;
-}
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState<Category | 'news'>('all');
-  const [subCategoryFilter, setSubCategoryFilter] = useState<string>('');
+const App: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<Category>('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  
-  // Ads State
-  const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
-  const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
-  
-  // Chat State
-  const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
-
-  // Other Data
-  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
-  const [movies, setMovies] = useState<Movie[]>(INITIAL_MOVIES);
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [shops, setShops] = useState<Shop[]>(INITIAL_SHOPS);
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-  const [isMerchantDashboardOpen, setIsMerchantDashboardOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cafes, setCafes] = useState<Shop[]>(INITIAL_CAFES);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [filters, setFilters] = useState({
-      minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' 
-  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false); // Mobile Search State
+  
+  const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeChatSession, setActiveChatSession] = useState<ChatSession | null>(null);
+  const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
+
+  const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
+  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
+  const [user, setUser] = useState<User>(DEFAULT_USER);
+  const [weather, setWeather] = useState<{temp: number, condition: string, pressure: number} | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isMerchantDashboardOpen, setIsMerchantDashboardOpen] = useState(false);
+  
+  // Dashboard Data
+  const [shops, setShops] = useState<Shop[]>(INITIAL_SHOPS);
+  const [cafes, setCafes] = useState<Shop[]>(INITIAL_CAFES);
+  const [gyms, setGyms] = useState<Shop[]>(INITIAL_GYMS);
+  const [movies, setMovies] = useState<Movie[]>(INITIAL_MOVIES);
 
-  const allShops = [...shops, ...cafes];
-
-  // --- Functions ---
-  const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
-      const newNote = { id: Date.now(), message, type };
-      setNotifications(prev => [...prev, newNote]);
-  };
-
-  const removeNotification = (id: number) => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const fetchFavorites = async (userId: string) => {
-      if (!supabase) return;
-      try {
-          const { data, error } = await supabase
-              .from('favorites')
-              .select('ad_id')
-              .eq('user_id', userId);
-          
-          if (error) {
-              console.error('Error fetching favorites:', error);
-          } else {
-              setFavorites(data.map((item: any) => item.ad_id));
-          }
-      } catch (err) {
-          console.error('Failed to fetch favorites', err);
-      }
-  };
-
-  // --- Effects ---
   useEffect(() => {
-    if (!supabase) return;
+    // Timer for weather widget
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Persistence for user ads and favorites
+  useEffect(() => {
+    // 1. Load User
+    const savedUser = localStorage.getItem('user_data');
+    if (savedUser) {
+        setUser(JSON.parse(savedUser));
+    }
+
+    // 2. Load My Pending Ads (for persistence before DB sync)
+    const pendingAds = localStorage.getItem('my_pending_ads');
+    if (pendingAds) {
+        const parsed: Ad[] = JSON.parse(pendingAds);
+        setAds(prev => {
+            // Merge unique
+            const newIds = new Set(parsed.map(a => a.id));
+            const filteredPrev = prev.filter(p => !newIds.has(p.id));
+            return [...parsed, ...filteredPrev];
+        });
+    }
+
+    // 3. Load Favorites
+    const savedFavs = localStorage.getItem('favorites');
+    if (savedFavs) {
+        const favIds: string[] = JSON.parse(savedFavs);
+        setUser(u => ({ ...u, favorites: favIds }));
+    }
+
+    // 4. Check Auth State
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-         const appUser = mapSupabaseUser(session.user);
-         setUser(appUser);
-         fetchFavorites(appUser.id);
+        const role = session.user.email?.includes('admin') ? true : false;
+        // Check if user manages a shop (mock logic)
+        let managedShopId = undefined;
+        if (session.user.email?.includes('cinema')) managedShopId = 'cinema1';
+        if (session.user.email?.includes('shop')) managedShopId = 's1';
+        
+        setUser(prev => ({ 
+            ...prev, 
+            id: session.user.id, 
+            email: session.user.email!, 
+            isLoggedIn: true,
+            isAdmin: role,
+            managedShopId: managedShopId,
+            name: session.user.user_metadata?.full_name || prev.name
+        }));
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const appUser = mapSupabaseUser(session.user);
-        setUser(appUser);
-        fetchFavorites(appUser.id);
-      } else {
-        setUser(null);
-        setFavorites([]);
-      }
+       if (session?.user) {
+          const role = session.user.email?.includes('admin') ? true : false;
+           let managedShopId = undefined;
+            if (session.user.email?.includes('cinema')) managedShopId = 'cinema1';
+            if (session.user.email?.includes('shop')) managedShopId = 's1';
+
+          setUser(prev => ({ 
+             ...prev, 
+             id: session.user.id, 
+             email: session.user.email!, 
+             isLoggedIn: true, 
+             isAdmin: role,
+             managedShopId: managedShopId,
+             name: session.user.user_metadata?.full_name || prev.name
+          }));
+       } else {
+          setUser(DEFAULT_USER);
+       }
     });
+
+    // Mock Weather
+    setWeather({ temp: 12, condition: 'Облачно', pressure: 745 });
+
+    // Fetch Ads from Supabase
+    fetchAds();
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Save favorites when they change
   useEffect(() => {
-    if (!supabase) return;
+    localStorage.setItem('favorites', JSON.stringify(user.favorites || []));
+  }, [user.favorites]);
 
-    const fetchAds = async () => {
+  const fetchAds = async () => {
       try {
-        const { data, error } = await supabase
-          .from('ads')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-            console.warn('Supabase fetch error:', error.message);
-        } else if (data) {
-            const mappedAds = data.map(mapAdFromDB);
-            const initialIds = new Set(INITIAL_ADS.map(a => a.id));
-            const filteredMapped = mappedAds.filter(a => !initialIds.has(a.id));
-            setAds([...filteredMapped, ...INITIAL_ADS]);
-        }
-      } catch (err) {
-          console.warn('Unexpected error fetching ads:', err);
-      }
-    };
-
-    fetchAds();
-
-    const channel = supabase
-      .channel('public:ads')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ads' }, (payload) => {
-         if (payload.eventType === 'INSERT') {
-            const newAd = mapAdFromDB(payload.new);
-            setAds((prev) => {
-                if (prev.some(a => a.id === newAd.id)) return prev;
-                if(newAd.status === 'approved' || user?.isAdmin) {
-                    addNotification(`Новое объявление: ${newAd.title}`, 'info');
-                }
-                return [newAd, ...prev];
-            });
-         } 
-         else if (payload.eventType === 'UPDATE') {
-            const updatedAd = mapAdFromDB(payload.new);
-            setAds((prev) => prev.map(ad => ad.id === updatedAd.id ? updatedAd : ad));
-         }
-         else if (payload.eventType === 'DELETE') {
-             setAds((prev) => prev.filter(ad => ad.id !== payload.old.id));
-         }
-      })
-      .subscribe((status, err) => {
-          if (err) console.warn('Realtime subscription error:', err);
-      });
-
-    return () => {
-        supabase.removeChannel(channel);
-    };
-  }, []);
-
-  useEffect(() => {
-      const localAvatar = localStorage.getItem('user_avatar');
-      if (user && localAvatar && !user.avatar) {
-          setUser({ ...user, avatar: localAvatar });
-      }
-  }, [user?.email]);
-
-  // Weather Logic
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const res = await fetch(
-          'https://api.open-meteo.com/v1/forecast?latitude=56.08&longitude=60.73&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,weather_code&wind_speed_unit=ms',
-          { signal: controller.signal }
-        );
-        clearTimeout(timeoutId);
-
-        if (!res.ok) throw new Error('API Error');
-        const data = await res.json();
-        const code = data.current.weather_code;
-        let condition = 'Ясно';
-        
-        if (code > 0 && code <= 3) { condition = 'Облачно'; }
-        else if (code >= 45 && code <= 48) { condition = 'Туман'; }
-        else if (code >= 51 && code <= 67) { condition = 'Дождь'; }
-        else if (code >= 71 && code <= 77) { condition = 'Снег'; }
-        else if (code >= 80 && code <= 82) { condition = 'Ливень'; }
-        else if (code >= 85 && code <= 86) { condition = 'Снегопад'; }
-
-        const pressureMmHg = Math.round(data.current.surface_pressure * 0.750062);
-
-        setWeather({
-          temp: Math.round(data.current.temperature_2m),
-          condition,
-          wind: Math.round(data.current.wind_speed_10m),
-          pressure: pressureMmHg,
-          humidity: data.current.relative_humidity_2m
-        });
-      } catch (error) {
-        console.warn("Weather fetch failed, using fallback");
-        setWeather({
-          temp: -12,
-          condition: 'Снег',
-          wind: 4,
-          pressure: 745,
-          humidity: 82
-        });
-      }
-    };
-    fetchWeather();
-  }, []);
-
-  // --- Handlers ---
-  const handleTabChange = (tab: Category | 'news') => {
-    setActiveTab(tab);
-    setSubCategoryFilter('');
-    setSelectedAd(null);
-    setSelectedShop(null);
-    setSelectedNews(null);
-    setFilters({ minPrice: '', maxPrice: '', minYear: '', maxMileage: '', minRooms: '', floor: '', condition: '' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const addToCart = (product: Product, quantity: number, shopId?: string) => {
-    const effectiveShopId = shopId || selectedShop?.id;
-    if (!effectiveShopId) return;
-
-    setCart(prev => {
-      const existingItem = prev.find(item => item.id === product.id && item.shopId === effectiveShopId);
-      if (existingItem) {
-        return prev.map(item => 
-          (item.id === product.id && item.shopId === effectiveShopId)
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prev, { ...product, quantity, shopId: effectiveShopId }];
-    });
-    addNotification(`Товар "${product.title}" добавлен в корзину`, 'success');
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
-  };
-
-  const updateCartQuantity = (productId: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === productId) {
-        const newQuantity = item.quantity + delta;
-        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
-      }
-      return item;
-    }));
-  };
-
-  const toggleFavorite = async (adId: string) => {
-      const isFav = favorites.includes(adId);
-      setFavorites(prev => {
-          if (isFav) return prev.filter(id => id !== adId);
-          return [...prev, adId];
-      });
-
-      if (!user) {
-          addNotification('Войдите, чтобы сохранять избранное навсегда', 'info');
-          return;
-      }
-
-      if (supabase && user) {
-          try {
-              if (isFav) {
-                  await supabase.from('favorites').delete().match({ user_id: user.id, ad_id: adId });
-              } else {
-                  await supabase.from('favorites').insert({ user_id: user.id, ad_id: adId });
-              }
-          } catch (err) {
-              console.error('Error updating favorites:', err);
+          const { data, error } = await supabase
+            .from('ads')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (error) {
+              console.warn('Supabase fetch error (using mock data):', getSafeErrorMessage(error));
+              // Suppress UI notification for initial fetch failure to keep UX clean
+              return; 
           }
+
+          if (data) {
+              const dbAds: Ad[] = data.map((item: any) => ({
+                  id: item.id,
+                  userId: item.user_id,
+                  title: item.title,
+                  description: item.description,
+                  price: item.price,
+                  category: item.category,
+                  subCategory: item.subcategory,
+                  contact: item.contact,
+                  location: item.location,
+                  image: item.image,
+                  isPremium: item.is_premium,
+                  date: new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+                  status: item.status || 'pending', // Default to pending if not set
+                  specs: item.specs || {}
+              }));
+              
+              setAds(prev => {
+                  // Keep pending ads from local state if they are not in DB yet
+                  // BUT replace them if DB has them (even if pending)
+                  const dbIds = new Set(dbAds.map(d => d.id));
+                  const localPending = prev.filter(p => p.status === 'pending' && !dbIds.has(p.id));
+                  return [...localPending, ...dbAds];
+              });
+          }
+      } catch (err: any) {
+          console.warn("Supabase connection error (using mock data)", getSafeErrorMessage(err));
+          // Suppress UI notification for network error on load
       }
-      
-      if (!isFav) addNotification('Добавлено в избранное', 'success');
   };
 
-  const handleUpdateUser = async (updatedUser: User) => {
-      setUser(updatedUser);
-      if (supabase) {
-        const { error } = await supabase.auth.updateUser({
-          data: { full_name: updatedUser.name }
-        });
-        if (error) {
-           console.error("Failed to update user metadata", error);
-           addNotification("Ошибка обновления профиля", "error");
-        } else {
-           addNotification('Профиль обновлен', 'success');
-           if (updatedUser.avatar) localStorage.setItem('user_avatar', updatedUser.avatar);
-        }
-      }
+  const addNotification = (note: Notification) => {
+      setNotifications(prev => [...prev, note]);
+  };
+
+  const handleRemoveNotification = (id: number) => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleCreateAd = async (form: CreateAdFormState) => {
+    // Process specs: convert strings to numbers
     const specs: Ad['specs'] = {};
-    if (form.specs?.year) specs.year = Number(form.specs.year);
-    if (form.specs?.mileage) specs.mileage = Number(form.specs.mileage);
-    if (form.specs?.rooms) specs.rooms = Number(form.specs.rooms);
-    if (form.specs?.area) specs.area = Number(form.specs.area);
-    if (form.specs?.floor) specs.floor = Number(form.specs.floor);
-    if (form.specs?.condition) specs.condition = form.specs.condition as 'new' | 'used';
-    if (form.specs?.brand) specs.brand = form.specs.brand;
+    if (form.specs) {
+        if (form.specs.year) specs.year = Number(form.specs.year);
+        if (form.specs.mileage) specs.mileage = Number(form.specs.mileage);
+        if (form.specs.rooms) specs.rooms = Number(form.specs.rooms);
+        if (form.specs.area) specs.area = Number(form.specs.area);
+        if (form.specs.floor) specs.floor = Number(form.specs.floor);
+        if (form.specs.condition) specs.condition = form.specs.condition as 'new' | 'used';
+        if (form.specs.brand) specs.brand = form.specs.brand;
+    }
 
+    // Optimistic UI Update
     const newAd: Ad = {
-      id: Date.now().toString(),
-      userId: user?.id,
+      id: Date.now().toString(), // Temporary ID
+      userId: user.id,
       title: form.title,
       description: form.description,
       price: Number(form.price),
@@ -822,476 +755,919 @@ export default function App() {
       subCategory: form.subCategory,
       contact: form.contact,
       location: form.location,
-      image: form.images[0] || 'https://via.placeholder.com/800x600?text=No+Image',
+      image: form.images[0] || 'https://via.placeholder.com/300',
       images: form.images,
       isPremium: form.isPremium,
       date: 'Только что',
+      status: 'pending', // Optimistically show as pending
       reviews: [],
-      specs: Object.keys(specs).length > 0 ? specs : undefined,
-      status: 'pending'
+      specs: specs
     };
 
-    if (supabase) {
-        addNotification('Отправка...', 'info');
-        try {
-            const { error } = await supabase.from('ads').insert({
-                user_id: user?.id,
-                title: newAd.title,
-                description: newAd.description,
-                price: newAd.price,
-                category: newAd.category,
-                sub_category: newAd.subCategory,
-                contact: newAd.contact,
-                location: newAd.location,
-                image: newAd.image,
-                images: newAd.images,
-                is_premium: newAd.isPremium,
-                specs: newAd.specs,
-                status: 'pending',
-                created_at: new Date().toISOString()
-            });
+    // 1. Update UI immediately
+    setAds(prev => [newAd, ...prev]);
+    
+    // 2. Save to Local Storage (Backup)
+    const currentPending = JSON.parse(localStorage.getItem('my_pending_ads') || '[]');
+    localStorage.setItem('my_pending_ads', JSON.stringify([newAd, ...currentPending]));
 
-            if (error) {
-                console.error('Error creating ad in DB:', error.message);
-                addNotification('Ошибка при сохранении', 'error');
-            } else {
-                addNotification('Объявление отправлено на модерацию!', 'success');
-            }
-        } catch (err) {
-            console.error('Supabase Insert Exception:', err);
-            addNotification('Ошибка сети', 'error');
-        }
-    } else {
-        setAds([newAd, ...ads]);
-        addNotification('Объявление создано (оффлайн режим)', 'success');
+    addNotification({ id: Date.now(), message: 'Объявление отправлено на модерацию!', type: 'success' });
+
+    // 3. Send to Supabase
+    try {
+        const { data, error } = await supabase
+            .from('ads')
+            .insert({
+                user_id: user.id === 'guest' ? null : user.id, // Handle guest posting
+                title: form.title,
+                description: form.description,
+                price: Number(form.price),
+                category: form.category,
+                subcategory: form.subCategory,
+                contact: form.contact,
+                location: form.location,
+                image: form.images[0] || '',
+                is_premium: form.isPremium,
+                status: 'pending', // Explicitly set status
+                specs: specs
+            })
+            .select();
+
+        if (error) throw error;
+        
+        // If success, we can replace the optimistic ad with the real one, 
+        // OR wait for the next fetch/subscription update. 
+        // For now, let's just re-fetch to sync IDs.
+        fetchAds();
+
+    } catch (err: any) {
+        console.error("Failed to save ad:", err);
+        const errMsg = getSafeErrorMessage(err);
+        addNotification({ id: Date.now(), message: 'Ошибка сохранения: ' + errMsg, type: 'error' });
+        // Optional: Remove optimistic ad if failed
     }
-    handleTabChange('all');
   };
 
-  const handleUpdateAdStatus = (adId: string, status: 'approved' | 'rejected') => {
-      setAds(prev => {
-          if (status === 'rejected') return prev.filter(ad => ad.id !== adId);
-          return prev.map(ad => ad.id === adId ? { ...ad, status } : ad);
-      });
-      if (supabase) {
-          supabase.from('ads').update({ status }).eq('id', adId).then(({ error }) => {
-              if (error) addNotification('Ошибка обновления статуса', 'error');
-          });
-      }
-  };
-
-  const handleUpdateAdContent = (adId: string, updatedFields: Partial<Ad>) => {
-      setAds(prev => prev.map(ad => ad.id === adId ? { ...ad, ...updatedFields } : ad));
-      addNotification('Объявление обновлено', 'success');
-       if (supabase) {
-          const dbFields: any = { ...updatedFields };
-          if (updatedFields.isPremium !== undefined) { dbFields.is_premium = updatedFields.isPremium; delete dbFields.isPremium; }
-          if (updatedFields.subCategory !== undefined) { dbFields.sub_category = updatedFields.subCategory; delete dbFields.subCategory; }
-          supabase.from('ads').update(dbFields).eq('id', adId);
-       }
-  };
-
-  const handleAddNews = (newsItem: NewsItem) => setNews([newsItem, ...news]);
-
-  const handleAddReview = (adId: string, rating: number, text: string) => {
-     setAds(prevAds => prevAds.map(ad => {
-         if (ad.id === adId) {
-             const newReview: Review = {
-                 id: Date.now().toString(),
-                 author: user ? user.name || 'Пользователь' : 'Гость',
-                 rating,
-                 text,
-                 date: 'Сегодня'
-             };
-             const currentReviews = ad.reviews || [];
-             const updatedAd = { ...ad, reviews: [newReview, ...currentReviews] };
-             if (selectedAd && selectedAd.id === adId) setSelectedAd(updatedAd);
-             return updatedAd;
+  const handleAddToCart = (product: Product, quantity: number) => {
+     setCart(prev => {
+         // Check if item exists (same id AND same shop - though id usually unique)
+         const existing = prev.find(item => item.id === product.id);
+         if (existing) {
+             return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
          }
-         return ad;
-     }));
-     addNotification('Спасибо за ваш отзыв!', 'success');
+         // Find which shop this product belongs to
+         let shopId = 'unknown';
+         // combine all shops including cafes and gyms
+         const allShops = [...shops, ...cafes, ...gyms]; 
+         
+         const ownerShop = allShops.find(s => s.products.some(p => p.id === product.id));
+         if (ownerShop) shopId = ownerShop.id;
+
+         return [...prev, { ...product, quantity, shopId }];
+     });
+     addNotification({ id: Date.now(), message: `Добавлено в корзину: ${product.title}`, type: 'success' });
   };
 
-  const handleUpdateShop = (updatedShop: Shop) => setShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
-
-  const handleOpenShopFromStory = (shopId: string) => {
-    if (shopId === 'cinema1' || shopId.includes('cinema')) { handleTabChange('cinema'); return; }
-    const cafe = cafes.find(c => c.id === shopId);
-    if (cafe) { handleTabChange('cafes'); setSelectedShop(cafe); return; }
-    const shop = shops.find(s => s.id === shopId);
-    if (shop) { handleTabChange('shops'); setSelectedShop(shop); return; }
+  const handleUpdateCartQuantity = (id: string, delta: number) => {
+      setCart(prev => prev.map(item => {
+          if (item.id === id) {
+              const newQ = item.quantity + delta;
+              return newQ > 0 ? { ...item, quantity: newQ } : item;
+          }
+          return item;
+      }));
   };
 
-  // Filters
-  const filteredAds = ads.filter(ad => {
-    if (ad.status !== 'approved') return false;
-    const matchesCategory = activeTab === 'all' || ad.category === activeTab;
-    const matchesSubCategory = !subCategoryFilter || ad.subCategory === subCategoryFilter;
-    const matchesSearch = ad.title.toLowerCase().includes(searchQuery.toLowerCase()) || ad.description.toLowerCase().includes(searchQuery.toLowerCase());
-    let matchesAdvanced = true;
-    if (filters.minPrice && ad.price < Number(filters.minPrice)) matchesAdvanced = false;
-    if (filters.maxPrice && ad.price > Number(filters.maxPrice)) matchesAdvanced = false;
-    if (ad.specs) {
-        if (filters.minYear && (!ad.specs.year || ad.specs.year < Number(filters.minYear))) matchesAdvanced = false;
-        if (filters.maxMileage && (!ad.specs.mileage || ad.specs.mileage > Number(filters.maxMileage))) matchesAdvanced = false;
-        if (filters.minRooms && (!ad.specs.rooms || ad.specs.rooms < Number(filters.minRooms))) matchesAdvanced = false;
-        if (filters.floor && (!ad.specs.floor || ad.specs.floor !== Number(filters.floor))) matchesAdvanced = false;
-        if (filters.condition && (!ad.specs.condition || ad.specs.condition !== filters.condition)) matchesAdvanced = false;
-    }
-    return matchesCategory && matchesSubCategory && matchesSearch && matchesAdvanced;
-  });
+  const handleRemoveFromCart = (id: string) => {
+      setCart(prev => prev.filter(item => item.id !== id));
+  };
 
-  const premiumAds = filteredAds.filter(ad => ad.isPremium);
-  const standardAds = filteredAds.filter(ad => !ad.isPremium);
-  const showCarFilters = activeTab === 'sale' && subCategoryFilter === 'Автомобили';
-  const showRealEstateFilters = (activeTab === 'sale' || activeTab === 'rent') && (subCategoryFilter === 'Квартиры' || subCategoryFilter === 'Дома, дачи');
-  const activeCatalogCategory = SERVICE_CATALOG.find(c => c.id === activeTab);
-  const subCategories = activeCatalogCategory ? activeCatalogCategory.groups.flatMap(g => g.items) : [];
+  // WRAPPED HANDLERS FOR AUTH GATEKEEPING
+  const handleShowAd = (ad: Ad) => {
+      // Allows everyone to see details
+      setSelectedAd(ad);
+  };
 
-  return (
-    <div className="min-h-screen bg-background text-dark font-sans selection:bg-primary/20 pb-20 lg:pb-0">
+  const handleToggleFavorite = (id: string) => {
+      if (!user.isLoggedIn) {
+          setIsLoginModalOpen(true);
+          return;
+      }
+      const newFavs = user.favorites?.includes(id) 
+        ? user.favorites.filter(fid => fid !== id)
+        : [...(user.favorites || []), id];
       
-      <ToastNotification notifications={notifications} onRemove={removeNotification} />
+      setUser({ ...user, favorites: newFavs });
+      // Saved to localStorage via useEffect
+  };
 
-      {/* RENDER CHAT PAGE AS FULL OVERLAY IF ACTIVE */}
-      {activeChat && (
-          <ChatPage 
-             session={activeChat} 
-             onBack={() => setActiveChat(null)} 
-             currentUserId={user?.id}
+  const handleOpenShop = (shopId: string) => {
+      const shop = [...shops, ...cafes, ...gyms].find(s => s.id === shopId);
+      if (shop) setSelectedShop(shop);
+  };
+  
+  const handleBackFromShop = () => {
+    // If we were in cinema, go back to cinema main view
+    if (selectedShop?.id === 'cinema1') {
+        setSelectedShop(null);
+        setActiveCategory('cinema');
+        return;
+    }
+    // Default back
+    setSelectedShop(null);
+  };
+
+  // Helper to determine shop variant
+  const getShopVariant = (shop: Shop): 'cinema' | 'cafe' | 'shop' => {
+      if (shop.id.includes('cinema')) return 'cinema';
+      if (cafes.some(c => c.id === shop.id)) return 'cafe';
+      return 'shop';
+  };
+
+
+  // --- Views ---
+
+  // Taxi View
+  const TaxiView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+       {TAXI_SERVICES.map(taxi => (
+          <div key={taxi.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                  <div className="text-4xl">{taxi.icon}</div>
+                  <div>
+                      <h3 className="font-bold text-dark text-lg">{taxi.name}</h3>
+                      <p className="text-secondary text-xs">{taxi.description}</p>
+                  </div>
+              </div>
+              {taxi.phone ? (
+                  <a href={`tel:${taxi.phone}`} className="bg-green-500 text-white font-bold py-2 px-6 rounded-xl hover:bg-green-600 transition-colors shadow-lg shadow-green-200">
+                      Вызвать
+                  </a>
+              ) : (
+                  <a href={taxi.link} target="_blank" rel="noreferrer" className="bg-yellow-400 text-dark font-bold py-2 px-6 rounded-xl hover:bg-yellow-500 transition-colors shadow-lg shadow-yellow-200">
+                      Приложение
+                  </a>
+              )}
+          </div>
+       ))}
+    </div>
+  );
+
+  // Medicine View
+  const MedicineView = () => (
+      <div className="space-y-4 animate-fade-in-up">
+          {MEDICINE_SERVICES.map(place => (
+              <div key={place.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
+                  <div className="w-24 h-24 bg-gray-100 rounded-xl overflow-hidden shrink-0">
+                      <img src={place.image} className="w-full h-full object-cover" alt={place.name} />
+                  </div>
+                  <div className="flex-grow">
+                      <h3 className="font-bold text-dark text-lg">{place.name}</h3>
+                      <p className="text-sm text-gray-500 mb-1">{place.address}</p>
+                      <p className="text-xs text-secondary mb-3">{place.description}</p>
+                      <a href={`tel:${place.phone}`} className="text-primary font-bold text-sm bg-blue-50 px-3 py-1 rounded-lg hover:bg-blue-100 transition-colors">
+                          {place.phone}
+                      </a>
+                  </div>
+              </div>
+          ))}
+      </div>
+  );
+
+  // Emergency View
+  const EmergencyView = () => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+          {EMERGENCY_NUMBERS.map(num => (
+              <div key={num.id} className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-center justify-between">
+                  <div>
+                      <h3 className="font-bold text-red-900">{num.name}</h3>
+                      <p className="text-xs text-red-700 opacity-80">{num.desc}</p>
+                  </div>
+                  <a href={`tel:${num.phone}`} className="text-2xl font-black text-red-600 hover:text-red-700">
+                      {num.phone}
+                  </a>
+              </div>
+          ))}
+      </div>
+  );
+
+  // Culture View
+  const CultureView = () => (
+      <div className="space-y-6 animate-fade-in-up">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {CULTURE_PLACES.map(place => (
+                 <div key={place.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                     <div className="h-32 overflow-hidden">
+                         <img src={place.image} className="w-full h-full object-cover" alt={place.name} />
+                     </div>
+                     <div className="p-4">
+                         <h3 className="font-bold text-dark">{place.name}</h3>
+                         <p className="text-xs text-gray-500 mb-2">{place.address}</p>
+                         <p className="text-sm text-secondary mb-3">{place.description}</p>
+                         {place.phone && (
+                             <a href={`tel:${place.phone}`} className="text-primary text-xs font-bold border border-primary/20 px-2 py-1 rounded hover:bg-primary hover:text-white transition-colors">
+                                 Позвонить
+                             </a>
+                         )}
+                     </div>
+                 </div>
+             ))}
+          </div>
+
+          <h3 className="text-xl font-bold text-dark mt-8 mb-4">Новости культуры</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+             {news.filter(n => n.category === 'Культура').map(item => (
+                 <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-all group">
+                    <div className="h-40 overflow-hidden relative">
+                        <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <span className="absolute top-2 left-2 bg-white/90 backdrop-blur text-xs font-bold px-2 py-1 rounded text-dark">{item.date}</span>
+                    </div>
+                    <div className="p-4">
+                        <h3 className="font-bold text-dark leading-tight mb-2 group-hover:text-primary transition-colors">{item.title}</h3>
+                        <p className="text-xs text-secondary line-clamp-2">{item.excerpt}</p>
+                    </div>
+                 </div>
+             ))}
+             {news.filter(n => n.category === 'Культура').length === 0 && (
+                 <p className="text-secondary text-sm">Новостей пока нет.</p>
+             )}
+          </div>
+      </div>
+  );
+
+  const renderContent = () => {
+    // 1. Taxi
+    if (activeCategory === 'taxi') return <TaxiView />;
+    // 2. Medicine
+    if (activeCategory === 'medicine') return <MedicineView />;
+    // 3. Emergency
+    if (activeCategory === 'emergency') return <EmergencyView />;
+    // 4. Culture
+    if (activeCategory === 'culture') return <CultureView />;
+
+    // 5. Shops
+    if (activeCategory === 'shops') {
+        const filteredShops = shops.filter(s => !s.id.includes('cinema')); // Exclude cinema from shops list
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
+                {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onClick={setSelectedShop} />)}
+            </div>
+        );
+    }
+    
+    // 6. Cafes
+    if (activeCategory === 'cafes') {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
+                {cafes.map(cafe => <ShopCard key={cafe.id} shop={cafe} onClick={(s) => setSelectedShop(s)} />)}
+            </div>
+        );
+    }
+
+    // 7. Gyms
+    if (activeCategory === 'gyms') {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
+                {gyms.map(gym => <ShopCard key={gym.id} shop={gym} onClick={(s) => setSelectedShop(s)} />)}
+            </div>
+        );
+    }
+
+    // 8. Cinema
+    if (activeCategory === 'cinema') {
+        return (
+            <div className="space-y-8 animate-fade-in-up">
+                <div className="bg-gradient-to-r from-violet-900 to-indigo-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="relative z-10">
+                        <h2 className="text-3xl font-bold mb-2">Кинотеатр "Космос"</h2>
+                        <p className="text-indigo-200 mb-6 max-w-lg">Смотрите новинки кино в лучшем качестве. Покупайте билеты онлайн без очередей.</p>
+                        <button 
+                            onClick={() => handleOpenShop('cinema1')} // Open cinema shop page for bar
+                            className="bg-white text-indigo-900 font-bold py-3 px-6 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
+                        >
+                            Бар кинотеатра
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {movies.map(movie => (
+                        <div key={movie.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 group flex flex-col h-full hover:shadow-xl transition-all">
+                             <div className="relative aspect-[2/3] overflow-hidden bg-gray-900">
+                                 <img src={movie.image} alt={movie.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
+                                 <div className="absolute top-2 left-2 bg-dark/80 backdrop-blur text-white text-xs font-bold px-2 py-1 rounded border border-white/20">{movie.ageLimit}</div>
+                                 <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">{movie.rating}</div>
+                             </div>
+                             <div className="p-4 flex flex-col flex-grow">
+                                 <h3 className="font-bold text-dark text-lg mb-1 leading-tight">{movie.title}</h3>
+                                 <p className="text-xs text-secondary mb-4">{movie.genre}</p>
+                                 <div className="mt-auto">
+                                     <div className="flex flex-wrap gap-2 mb-4">
+                                         {movie.showtimes.map(time => (
+                                             <button 
+                                                key={time} 
+                                                onClick={() => setActiveMovie(movie)}
+                                                className="bg-gray-100 hover:bg-primary hover:text-white text-dark text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                             >
+                                                 {time}
+                                             </button>
+                                         ))}
+                                     </div>
+                                     <button 
+                                        onClick={() => setActiveMovie(movie)}
+                                        className="w-full bg-dark text-white font-bold py-3 rounded-xl hover:bg-black transition-colors"
+                                     >
+                                         Купить от {movie.price} ₽
+                                     </button>
+                                 </div>
+                             </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // 9. News
+    if (activeCategory === 'news') {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+                {news.map(item => (
+                    <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group h-full flex flex-col">
+                        <div className="h-48 overflow-hidden relative">
+                            <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                                <span className="text-xs font-bold text-white bg-white/20 backdrop-blur px-2 py-1 rounded border border-white/10">
+                                    {item.category}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="p-5 flex flex-col flex-grow">
+                            <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                                <span>{item.date}</span>
+                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                <span>3 мин</span>
+                            </div>
+                            <h3 className="font-bold text-dark text-lg leading-tight mb-3 group-hover:text-primary transition-colors">{item.title}</h3>
+                            <p className="text-sm text-secondary line-clamp-3 mb-4">{item.excerpt}</p>
+                            <span className="mt-auto text-primary text-sm font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Читать далее 
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 10. Ads List (Default)
+    let filteredAds = ads;
+    
+    // Filter logic:
+    // 1. By Search Query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredAds = filteredAds.filter(ad => 
+            ad.title.toLowerCase().includes(query) || 
+            ad.description.toLowerCase().includes(query)
+        );
+    }
+
+    // 2. By Category/SubCategory (only if not searching broadly)
+    if (activeCategory !== 'all' && !searchQuery) {
+        filteredAds = filteredAds.filter(ad => ad.category === activeCategory);
+    }
+    if (selectedSubCategory && !searchQuery) {
+        filteredAds = filteredAds.filter(ad => ad.subCategory === selectedSubCategory);
+    }
+
+    // 3. By Status (Hide pending/rejected unless it's MY ad)
+    // "My ad" check uses userId.
+    filteredAds = filteredAds.filter(ad => {
+        if (ad.status === 'approved') return true;
+        // If pending/rejected, show ONLY if it belongs to current user
+        return ad.userId === user.id || (user.id === 'guest' && ad.userId === undefined /* legacy */);
+    });
+
+    // Separate Premium Ads
+    const premiumAds = filteredAds.filter(ad => ad.isPremium);
+    const regularAds = filteredAds.filter(ad => !ad.isPremium);
+
+    return (
+        <div className="space-y-12 animate-fade-in-up">
+            {filteredAds.length > 0 ? (
+                <>
+                    {premiumAds.length > 0 && (
+                        // VIP CONTAINER CHANGE: Removed padding wrapper to fix width issues
+                        <div className="mb-8">
+                            <h3 className="text-xl font-bold text-dark mb-4 md:mb-6 flex items-center gap-2 pl-2 md:pl-0">
+                                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-white shadow-lg shadow-yellow-200">
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                </span> 
+                                VIP Объявления
+                            </h3>
+                            {/* Same grid layout as regular ads */}
+                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+                                {premiumAds.map((ad) => (
+                                    <AdCard 
+                                        key={ad.id} 
+                                        ad={ad} 
+                                        variant="premium"
+                                        onShow={handleShowAd} // WRAPPED
+                                        isFavorite={user.favorites?.includes(ad.id)}
+                                        onToggleFavorite={handleToggleFavorite} // WRAPPED
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {regularAds.length > 0 && (
+                        <div>
+                             {premiumAds.length > 0 && <div className="h-px bg-gray-100 my-8"></div>}
+                             {premiumAds.length > 0 && <h3 className="text-xl font-bold text-dark mb-6 pl-2 border-l-4 border-primary">Свежие предложения</h3>}
+                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+                                {regularAds.map((ad) => (
+                                    <AdCard 
+                                        key={ad.id} 
+                                        ad={ad} 
+                                        onShow={handleShowAd} // WRAPPED
+                                        isFavorite={user.favorites?.includes(ad.id)}
+                                        onToggleFavorite={handleToggleFavorite} // WRAPPED
+                                    />
+                                ))}
+                             </div>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="col-span-full py-20 text-center text-secondary">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <p className="text-lg font-medium text-dark">Объявлений не найдено</p>
+                    <p className="text-sm">Попробуйте изменить категорию или фильтры</p>
+                    {(activeCategory !== 'all' || searchQuery) && (
+                        <button onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); setSearchQuery(''); }} className="mt-4 text-primary font-bold hover:underline">
+                            Сбросить фильтры
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+  };
+
+  // Render Full Pages overrides
+  if (selectedAd) {
+    return (
+        <>
+            <div className="bg-background min-h-screen p-4 md:p-6 pb-24 md:pl-72">
+                <AdPage 
+                    ad={selectedAd} 
+                    onBack={() => setSelectedAd(null)} 
+                    onAddReview={(id, r, t) => {
+                         // Mock Review Add
+                         setAds(prev => prev.map(a => {
+                             if(a.id === id) {
+                                 return { ...a, reviews: [...(a.reviews || []), { id: Date.now().toString(), author: user.name || 'Гость', rating: r, text: t, date: 'Сейчас' }] };
+                             }
+                             return a;
+                         }));
+                    }}
+                    onOpenChat={(session) => {
+                        if (user.isLoggedIn) {
+                            setActiveChatSession(session);
+                        } else {
+                            setIsLoginModalOpen(true);
+                        }
+                    }}
+                    isLoggedIn={user.isLoggedIn}
+                    onRequireLogin={() => setIsLoginModalOpen(true)}
+                />
+            </div>
+            {/* Keeping modal infrastructure active if needed */}
+             {activeChatSession && user.isLoggedIn && (
+                <ChatPage 
+                    session={activeChatSession} 
+                    onBack={() => setActiveChatSession(null)} 
+                    currentUserId={user.id}
+                />
+            )}
+            {/* Consolidated LoginModal - rendered here to overlay AdPage if triggered */}
+            <LoginModal 
+              isOpen={isLoginModalOpen} 
+              onClose={() => setIsLoginModalOpen(false)} 
+            />
+        </>
+    );
+  }
+
+  if (selectedNews) {
+      return (
+          <div className="bg-background min-h-screen p-4 md:p-6 pb-24 md:pl-72">
+              <NewsPage news={selectedNews} onBack={() => setSelectedNews(null)} />
+              <LoginModal 
+                  isOpen={isLoginModalOpen} 
+                  onClose={() => setIsLoginModalOpen(false)} 
+              />
+          </div>
+      );
+  }
+
+  if (selectedShop) {
+      return (
+          <div className="bg-background min-h-screen p-4 md:p-6 pb-24 md:pl-72">
+              <ShopPage 
+                shop={selectedShop} 
+                variant={getShopVariant(selectedShop)}
+                onBack={handleBackFromShop} 
+                onProductClick={setSelectedProduct}
+              />
+              <ProductDetailsModal 
+                 product={selectedProduct}
+                 isOpen={!!selectedProduct}
+                 onClose={() => setSelectedProduct(null)}
+                 onAddToCart={handleAddToCart}
+              />
+              <CartDrawer 
+                 isOpen={isCartOpen} 
+                 onClose={() => setIsCartOpen(false)}
+                 items={cart}
+                 shops={[...shops, ...cafes, ...gyms]} // Cinema logic handled in CartDrawer via ShopId
+                 onUpdateQuantity={handleUpdateCartQuantity}
+                 onRemove={handleRemoveFromCart}
+              />
+              {/* Floating Cart Button for Shop Page */}
+              {cart.length > 0 && (
+                <div className="fixed bottom-6 right-6 z-40 animate-bounce">
+                    <button 
+                        onClick={() => setIsCartOpen(true)}
+                        className="bg-primary text-white p-4 rounded-full shadow-xl hover:bg-primary-dark transition-colors relative"
+                    >
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                            {cart.reduce((a,c) => a + c.quantity, 0)}
+                        </span>
+                    </button>
+                </div>
+              )}
+              <LoginModal 
+                  isOpen={isLoginModalOpen} 
+                  onClose={() => setIsLoginModalOpen(false)} 
+              />
+          </div>
+      );
+  }
+
+  // Sidebar Component (Desktop Only)
+  const Sidebar = () => (
+      <aside className="hidden md:flex flex-col w-64 fixed left-0 top-0 bottom-0 bg-white border-r border-gray-100 z-50 p-6 overflow-y-auto">
+          <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); }}>
+             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
+               С
+             </div>
+             <div className="leading-none">
+               <h1 className="font-bold text-xl text-dark tracking-tight">Снежинск</h1>
+               <p className="text-[10px] text-secondary font-medium tracking-widest uppercase">Твой Город</p>
+             </div>
+          </div>
+
+          <nav className="flex flex-col gap-1">
+              {NAV_ITEMS.map(cat => (
+                  <button 
+                    key={cat.id}
+                    onClick={() => { setActiveCategory(cat.id as Category); setSelectedSubCategory(null); setSearchQuery(''); }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all
+                        ${activeCategory === cat.id 
+                            ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                            : 'text-secondary hover:bg-gray-50 hover:text-dark'}`}
+                  >
+                      <span className="text-lg">{cat.icon}</span>
+                      {cat.label}
+                  </button>
+              ))}
+          </nav>
+          
+          <div className="mt-auto pt-6">
+              <button 
+                  onClick={() => setIsPartnerModalOpen(true)}
+                  className="w-full bg-dark text-white p-4 rounded-2xl shadow-lg hover:bg-black transition-all group relative overflow-hidden"
+              >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="flex items-center gap-3 relative z-10">
+                      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-serif font-bold">B</div>
+                      <div className="text-left">
+                          <p className="text-xs text-gray-300 font-medium">Для бизнеса</p>
+                          <p className="text-sm font-bold">Подключить</p>
+                      </div>
+                  </div>
+              </button>
+          </div>
+      </aside>
+  );
+
+  // Main Layout
+  return (
+    <div className="min-h-screen bg-background font-sans text-dark pb-24 md:pb-0 relative">
+      <ToastNotification notifications={notifications} onRemove={handleRemoveNotification} />
+      
+      <Sidebar />
+
+      <div className="md:ml-64 transition-all">
+          {/* Header */}
+          <header className="bg-surface/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between gap-4">
+              
+              {/* Mobile Logo with Text */}
+              <div className="md:hidden flex items-center gap-2 cursor-pointer" onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); }}>
+                 <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">С</div>
+                 <span className="font-bold text-lg text-dark ml-1">Твой Снежинск</span>
+              </div>
+
+              {/* Desktop Search / Catalog */}
+              <div className="hidden md:flex items-center gap-4 flex-grow max-w-2xl">
+                  <button 
+                    onClick={() => setIsCatalogOpen(true)}
+                    className="flex items-center gap-2 bg-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-black transition-colors"
+                  >
+                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                     Каталог
+                  </button>
+                  <div className="relative flex-grow group">
+                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                     </div>
+                     <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm" 
+                        placeholder="Поиск объявлений..." 
+                     />
+                  </div>
+              </div>
+
+              {/* Right Side Actions */}
+              <div className="flex items-center gap-3 md:gap-6">
+                 {/* Mobile Search Icon */}
+                 <button onClick={() => setIsSearchModalOpen(true)} className="md:hidden p-2 rounded-full hover:bg-gray-100 text-dark">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                 </button>
+
+                 {/* Weather Widget */}
+                 {weather && (
+                   <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                      <div className="text-right leading-tight">
+                          <span className="block font-bold text-dark text-lg">{currentTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</span>
+                          <span className="text-[10px] text-secondary font-medium uppercase tracking-wide">Снежинск</span>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200"></div>
+                      <div className="flex items-center gap-2">
+                          <span className="text-2xl">☁️</span>
+                          <div className="leading-tight">
+                             <span className="block font-bold text-dark">{weather.temp}°C</span>
+                             <span className="text-[10px] text-secondary">{weather.pressure} мм</span>
+                          </div>
+                      </div>
+                   </div>
+                 )}
+                 
+                 {user.isLoggedIn && (
+                     <button 
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="hidden md:flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95"
+                     >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <span>Разместить</span>
+                     </button>
+                 )}
+
+                 {user.isLoggedIn && (
+                     <div onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-primary to-blue-400 text-white flex items-center justify-center font-bold text-sm overflow-hidden border-2 border-white shadow-md">
+                           {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : user.name?.charAt(0) || user.email.charAt(0)}
+                        </div>
+                     </div>
+                 )}
+                 
+                 {/* Desktop Login Button */}
+                 {!user.isLoggedIn && (
+                     <button onClick={() => setIsLoginModalOpen(true)} className="hidden md:block text-sm font-bold text-dark hover:text-primary transition-colors bg-gray-100 px-4 py-2 rounded-lg">
+                        Войти
+                     </button>
+                 )}
+              </div>
+            </div>
+          </header>
+
+          {/* Stories Bar - Visible only on Mobile AND Main Page */}
+          <div className="md:hidden max-w-7xl mx-auto px-4 py-4">
+             {activeCategory === 'all' && !searchQuery && <StoriesBar stories={INITIAL_STORIES} onOpenShop={handleOpenShop} />}
+          </div>
+
+          {/* Sub-Category Filter */}
+          {selectedSubCategory && (
+              <div className="max-w-7xl mx-auto px-4 md:px-6 mt-4 mb-4 flex items-center gap-2 animate-fade-in-up">
+                  <span className="text-sm text-secondary">Фильтр:</span>
+                  <div className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                      {selectedSubCategory}
+                      <button onClick={() => setSelectedSubCategory(null)} className="hover:text-red-200">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                  </div>
+              </div>
+          )}
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 md:px-6 py-4">
+            {renderContent()}
+          </main>
+      </div>
+
+      {/* Floating Action Button (Mobile) - Reused as 'Add' in Bottom Nav, simplified here */}
+
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 flex justify-between items-center z-40 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+        
+        {/* 1. Home */}
+        <button onClick={() => setActiveCategory('all')} className={`flex flex-col items-center gap-1 p-2 w-16 ${activeCategory === 'all' ? 'text-primary' : 'text-gray-400'}`}>
+           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+           <span className="text-[10px] font-medium">Главная</span>
+        </button>
+
+        {/* 2. Catalog (Replaces Cinema) */}
+        <button onClick={() => setIsCatalogOpen(true)} className="flex flex-col items-center gap-1 p-2 w-16 text-gray-400">
+           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+           <span className="text-[10px] font-medium">Каталог</span>
+        </button>
+
+        {/* 3. Add Button (Center FAB) */}
+        <div className="relative -top-6">
+           <button 
+             onClick={() => {
+                 if (user.isLoggedIn) {
+                     setIsCreateModalOpen(true);
+                 } else {
+                     setIsLoginModalOpen(true);
+                 }
+             }}
+             className="w-14 h-14 rounded-full bg-dark text-white flex items-center justify-center shadow-lg shadow-dark/40 active:scale-95 transition-transform border-4 border-background"
+           >
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+           </button>
+        </div>
+
+        {/* 4. Menu (Replaces Taxi - Opens Sidebar Drawer) - RENAMED TO CITY */}
+        <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-1 p-2 w-16 text-gray-400">
+           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+           <span className="text-[10px] font-medium">Город</span>
+        </button>
+
+        {/* 5. Profile */}
+        <button onClick={() => { if(user.isLoggedIn) setIsUserProfileOpen(true); else setIsLoginModalOpen(true); }} className={`flex flex-col items-center gap-1 p-2 w-16 ${isUserProfileOpen ? 'text-primary' : 'text-gray-400'}`}>
+           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+           <span className="text-[10px] font-medium">Профиль</span>
+        </button>
+      </nav>
+
+      {/* Modals */}
+      <CreateAdModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        onSubmit={handleCreateAd}
+        catalog={CATALOG}
+      />
+      
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
+
+      <ServiceCatalogModal
+         isOpen={isCatalogOpen}
+         onClose={() => setIsCatalogOpen(false)}
+         catalog={CATALOG}
+         initialCategory={activeCategory === 'all' || activeCategory === 'news' ? 'sale' : activeCategory}
+         onSelect={(cat, sub) => {
+             setActiveCategory(cat);
+             setSelectedSubCategory(sub);
+         }}
+      />
+
+      {/* Mobile Menu Drawer */}
+      <MobileMenu 
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeCategory={activeCategory}
+        onSelectCategory={setActiveCategory}
+        navItems={NAV_ITEMS}
+      />
+
+      {/* Mobile Search Modal */}
+      <MobileSearchModal 
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        value={searchQuery}
+        onChange={(val) => {
+            setSearchQuery(val);
+            if (!val) setActiveCategory('all'); // Reset if cleared
+        }}
+      />
+      
+      <UserProfileModal
+         isOpen={isUserProfileOpen}
+         onClose={() => setIsUserProfileOpen(false)}
+         user={user}
+         onLogout={async () => {
+             await supabase.auth.signOut();
+             setUser(DEFAULT_USER);
+         }}
+         favorites={user.favorites || []}
+         allAds={ads}
+         onToggleFavorite={handleToggleFavorite}
+         onShowAd={(ad) => {
+             // If ad is pending and belongs to user, allow showing
+             setSelectedAd(ad);
+         }}
+         onUpdateUser={(u) => {
+             // Mock update user logic
+             setUser(u);
+             localStorage.setItem('user_data', JSON.stringify(u));
+         }}
+         onOpenAdminPanel={() => {
+             setIsUserProfileOpen(false);
+             setIsAdminPanelOpen(true);
+         }}
+         onOpenMerchantDashboard={() => {
+             setIsUserProfileOpen(false);
+             setIsMerchantDashboardOpen(true);
+         }}
+         onOpenPartnerModal={() => {
+             setIsUserProfileOpen(false);
+             setIsPartnerModalOpen(true);
+         }}
+      />
+
+      <MovieBookingModal
+         isOpen={!!activeMovie}
+         onClose={() => setActiveMovie(null)}
+         movie={activeMovie}
+      />
+
+      <CartDrawer 
+         isOpen={isCartOpen} 
+         onClose={() => setIsCartOpen(false)}
+         items={cart}
+         shops={[...shops, ...cafes, ...gyms]} // Cinema logic handled in CartDrawer via ShopId
+         onUpdateQuantity={handleUpdateCartQuantity}
+         onRemove={handleRemoveFromCart}
+      />
+
+      <PartnerModal 
+        isOpen={isPartnerModalOpen}
+        onClose={() => setIsPartnerModalOpen(false)}
+      />
+
+      {/* Admin & Merchant Panels */}
+      {user.isAdmin && (
+          <AdminPanel
+            isOpen={isAdminPanelOpen}
+            onClose={() => setIsAdminPanelOpen(false)}
+            ads={ads}
+            onUpdateAdStatus={async (id, status) => {
+                // Optimistic
+                setAds(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+                // DB
+                await supabase.from('ads').update({ status }).eq('id', id);
+            }}
+            onUpdateAdContent={async (id, fields) => {
+                setAds(prev => prev.map(a => a.id === id ? { ...a, ...fields } : a));
+                await supabase.from('ads').update(fields).eq('id', id);
+            }}
+            onAddNews={(n) => setNews(prev => [n, ...prev])}
           />
       )}
 
-      {/* --- DESKTOP HEADER --- */}
-      <header className="hidden lg:block bg-surface border-b border-gray-200 sticky top-0 z-40">
-           <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-8">
-               <div className="flex items-center gap-8">
-                   <div className="flex items-center gap-2 cursor-pointer group" onClick={() => handleTabChange('all')}>
-                       <SnezhikLogo className="w-10 h-10 text-primary transition-transform group-hover:scale-110" />
-                       <div className="flex flex-col leading-none">
-                           <h1 className="text-2xl font-extrabold text-primary tracking-tight">Твой<span className="text-dark">Снежинск</span></h1>
-                           <span className="text-[10px] text-secondary tracking-widest uppercase">Городской портал</span>
-                       </div>
-                   </div>
-                   <button onClick={() => setIsCatalogOpen(true)} className="bg-dark text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md active:scale-95">
-                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                       Каталог
-                   </button>
-               </div>
-               <div className="flex-grow max-w-xl relative">
-                   <input type="text" placeholder="Поиск..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-gray-100 border-2 border-transparent rounded-xl py-2.5 pl-11 pr-4 text-sm focus:bg-white focus:border-primary focus:outline-none transition-all" />
-                   <svg className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-               </div>
-               <div className="flex items-center gap-6">
-                   {weather && (
-                       <div className="flex items-center gap-3 text-right">
-                           <div className="hidden xl:block">
-                               <div className="text-lg font-bold text-dark leading-none">{weather.temp > 0 ? '+' : ''}{weather.temp}°</div>
-                               <div className="text-xs text-secondary">{weather.condition}</div>
-                           </div>
-                           <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-                               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
-                           </div>
-                           <div className="hidden xl:block">
-                                <div className="text-xs font-bold text-dark">{weather.pressure} мм</div>
-                                <div className="text-xs text-secondary">{new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</div>
-                           </div>
-                       </div>
-                   )}
-                   {cart.length > 0 && (
-                        <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-dark hover:text-primary transition-colors">
-                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">{cart.length}</span>
-                        </button>
-                   )}
-                   <div className="h-8 w-px bg-gray-200"></div>
-                   <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95 flex items-center gap-2">
-                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                       Подать
-                   </button>
-                   {user ? (
-                       <button onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-3 hover:bg-gray-50 px-2 py-1 rounded-xl transition-colors">
-                           <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-md overflow-hidden">
-                               {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : user.name?.charAt(0)}
-                           </div>
-                           <div className="text-left hidden xl:block">
-                               <div className="text-sm font-bold text-dark">{user.name}</div>
-                               <div className="text-xs text-secondary">Мой профиль</div>
-                           </div>
-                       </button>
-                   ) : (
-                       <button onClick={() => setIsLoginOpen(true)} className="text-dark font-bold hover:text-primary transition-colors text-sm">Войти</button>
-                   )}
-               </div>
-           </div>
-      </header>
-
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-surface/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200">
-        <div className="px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('all')}>
-               <SnezhikLogo className="w-8 h-8 text-primary" />
-               <div className="flex flex-col leading-none">
-                  <h1 className="text-xl font-extrabold text-primary tracking-tight">Твой<span className="text-dark">Снежинск</span></h1>
-                  {weather && <span className="text-[10px] text-secondary font-medium mt-0.5 flex items-center gap-1">{weather.temp > 0 ? '+' : ''}{weather.temp}°, {weather.condition}</span>}
-               </div>
-            </div>
-            {cart.length > 0 && (
-                <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-dark">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{cart.length}</span>
-                </button>
-            )}
-        </div>
-        {!selectedAd && !selectedShop && !selectedNews && (
-            <div className="px-4 pb-3">
-                <div className="relative">
-                    <input type="text" placeholder="Поиск..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-gray-100 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-primary/20" />
-                    <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </div>
-            </div>
-        )}
-      </header>
-
-      {/* MOBILE BOTTOM NAVIGATION */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-gray-200 z-40 flex justify-between items-center px-6 py-2 pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-         <button onClick={() => handleTabChange('all')} className={`flex flex-col items-center gap-1 ${activeTab === 'all' && !selectedShop && !selectedNews ? 'text-primary' : 'text-gray-400'}`}>
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-            <span className="text-[10px] font-medium">Главная</span>
-         </button>
-         <button onClick={() => setIsCatalogOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 hover:text-primary">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-            <span className="text-[10px] font-medium">Каталог</span>
-         </button>
-         <button onClick={() => setIsCreateModalOpen(true)} className="flex flex-col items-center justify-center -mt-6">
-            <div className="w-14 h-14 rounded-full bg-dark text-white flex items-center justify-center shadow-lg shadow-dark/40 active:scale-95 transition-transform">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-            </div>
-            <span className="text-[10px] font-medium text-dark mt-1">Подать</span>
-         </button>
-         <button onClick={() => { setIsUserProfileOpen(true); }} className="flex flex-col items-center gap-1 text-gray-400">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-            <span className="text-[10px] font-medium">Избранное</span>
-         </button>
-         <button onClick={() => { if(user) setIsUserProfileOpen(true); else setIsLoginOpen(true); }} className="flex flex-col items-center gap-1 text-gray-400">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            <span className="text-[10px] font-medium">Профиль</span>
-         </button>
-      </div>
-
-      {/* Main Page Content */}
-      <div className="container mx-auto px-4 py-6">
-         
-         {!selectedAd && !selectedShop && !selectedNews && (
-             <div className="lg:hidden mb-6">
-                 <StoriesBar stories={INITIAL_STORIES} onOpenShop={handleOpenShopFromStory} />
-             </div>
-         )}
-
-         {!selectedAd && !selectedShop && !selectedNews && activeTab === 'all' && (
-            <div className="lg:hidden grid grid-cols-4 gap-2 mb-6">
-                <button onClick={() => handleTabChange('shops')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-1.5 text-purple-600">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                    </div>
-                    <span className="text-[10px] font-bold text-dark">Магазины</span>
-                </button>
-                <button onClick={() => handleTabChange('cafes')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mb-1.5 text-orange-600">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /></svg>
-                    </div>
-                    <span className="text-[10px] font-bold text-dark">Кафе</span>
-                </button>
-                <button onClick={() => handleTabChange('cinema')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-1.5 text-red-600">
-                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
-                    </div>
-                    <span className="text-[10px] font-bold text-dark">Кино</span>
-                </button>
-                <button onClick={() => handleTabChange('news')} className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-1.5 text-blue-600">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
-                    </div>
-                    <span className="text-[10px] font-bold text-dark">Новости</span>
-                </button>
-            </div>
-         )}
-
-         <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar */}
-            <aside className="hidden lg:block w-64 flex-shrink-0 space-y-6 sticky top-24 h-fit">
-               <div className="bg-surface rounded-2xl shadow-sm border border-gray-100 p-2 space-y-1">
-                  {SERVICE_CATALOG.map((cat) => (
-                    <SidebarItem key={cat.id} label={cat.label} active={activeTab === cat.id} onClick={() => handleTabChange(cat.id)} icon={
-                        cat.id === 'sale' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> :
-                        cat.id === 'rent' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> :
-                        cat.id === 'services' ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> :
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    } />
-                  ))}
-                  <div className="my-2 border-t border-gray-100"></div>
-                  <SidebarItem label="Магазины" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>} active={activeTab === 'shops'} onClick={() => handleTabChange('shops')} />
-                  <SidebarItem label="Кафе и Еда" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /></svg>} active={activeTab === 'cafes'} onClick={() => handleTabChange('cafes')} />
-                  <SidebarItem label="Кинотеатр" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>} active={activeTab === 'cinema'} onClick={() => handleTabChange('cinema')} />
-                  <SidebarItem label="Новости" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} active={activeTab === 'news'} onClick={() => handleTabChange('news')} />
-               </div>
-               <div onClick={() => setIsPartnerModalOpen(true)} className="bg-gradient-to-br from-dark to-black rounded-2xl p-6 text-white cursor-pointer shadow-lg transform hover:-translate-y-1 transition-all group">
-                  <h3 className="font-bold text-lg mb-2">Для бизнеса</h3>
-                  <p className="text-sm text-gray-300 mb-4">Подключите магазин или услуги к платформе</p>
-                  <button className="bg-white text-dark text-xs font-bold px-4 py-2 rounded-lg group-hover:bg-gray-100 transition-colors">Подключить</button>
-               </div>
-               <div className="text-xs text-center text-gray-400">
-                  &copy; 2024 Твой Снежинск<br/><a href="#" className="hover:underline">Политика конфиденциальности</a>
-               </div>
-            </aside>
-
-            {/* Main Content Area */}
-            <main className="flex-grow min-w-0">
-               {/* Subcategories */}
-               {!selectedAd && !selectedShop && !selectedNews && subCategories.length > 0 && (
-                  <div className="hidden lg:flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
-                     <button onClick={() => setSubCategoryFilter('')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${!subCategoryFilter ? 'bg-dark text-white border-dark' : 'bg-white text-secondary border-gray-200 hover:border-gray-300'}`}>Все</button>
-                     {subCategories.map(sub => (
-                        <button key={sub} onClick={() => setSubCategoryFilter(sub)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${subCategoryFilter === sub ? 'bg-dark text-white border-dark' : 'bg-white text-secondary border-gray-200 hover:border-gray-300'}`}>{sub}</button>
-                     ))}
-                  </div>
-               )}
-
-               {/* View Switching */}
-               {selectedAd ? (
-                  <AdPage 
-                      ad={selectedAd} 
-                      onBack={() => setSelectedAd(null)} 
-                      onAddReview={handleAddReview}
-                      onOpenChat={(session) => setActiveChat(session)} 
-                  />
-               ) : selectedNews ? (
-                  <NewsPage news={selectedNews} onBack={() => setSelectedNews(null)} />
-               ) : selectedShop ? (
-                  <ShopPage shop={selectedShop} onBack={() => { setSelectedShop(null); handleTabChange('all'); }} variant={selectedShop.id.includes('c') ? 'cafe' : 'shop'} onProductClick={(p) => setSelectedProduct(p)} />
-               ) : (
-                  <div className="space-y-6 animate-fade-in-up">
-                     {/* News Grid */}
-                     {activeTab === 'news' ? (
-                         <div className="grid grid-cols-1 gap-6">
-                             {news.map(item => (
-                                 <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all flex flex-col md:flex-row group h-full md:h-56">
-                                     <div className="md:w-1/3 h-48 md:h-full relative overflow-hidden">
-                                         <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                         <span className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wide">{item.category}</span>
-                                     </div>
-                                     <div className="p-6 md:w-2/3 flex flex-col justify-between">
-                                         <div>
-                                             <div className="flex items-center gap-2 text-xs text-gray-400 mb-2"><span>{item.date}</span><span>•</span><span>2 мин чтения</span></div>
-                                             <h3 className="text-xl font-bold text-dark mb-2 leading-tight group-hover:text-primary transition-colors">{item.title}</h3>
-                                             <p className="text-secondary text-sm line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
-                                         </div>
-                                         <span className="text-primary font-bold text-sm mt-4 inline-block hover:underline">Читать далее →</span>
-                                     </div>
-                                 </div>
-                             ))}
-                         </div>
-                     ) : activeTab === 'shops' || activeTab === 'cafes' ? (
-                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                             {(activeTab === 'shops' ? shops : cafes).map(shop => (
-                                 <ShopCard key={shop.id} shop={shop} onClick={setSelectedShop} />
-                             ))}
-                         </div>
-                     ) : activeTab === 'cinema' ? (
-                         <div className="space-y-8">
-                             <div className="relative h-48 md:h-64 rounded-3xl overflow-hidden shadow-lg">
-                                 <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200" className="w-full h-full object-cover" />
-                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                     <div className="text-center text-white">
-                                         <h2 className="text-3xl md:text-4xl font-bold mb-2">Кинотеатр "Космос"</h2>
-                                         <p className="text-lg opacity-90">Премьеры этой недели</p>
-                                     </div>
-                                 </div>
-                             </div>
-                             <h3 className="text-2xl font-bold text-dark pl-2 border-l-4 border-primary">Сегодня в прокате</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                 {movies.map(movie => (
-                                     <div key={movie.id} className="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-xl transition-all">
-                                         <div className="relative aspect-[2/3] overflow-hidden">
-                                             <img src={movie.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                             <div className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow-sm">{movie.ageLimit}</div>
-                                             <div className="absolute top-2 right-2 bg-yellow-400 text-dark text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1"><span>★</span> {movie.rating}</div>
-                                         </div>
-                                         <div className="p-4 flex-grow flex flex-col">
-                                             <h4 className="font-bold text-lg text-dark mb-1 leading-tight">{movie.title}</h4>
-                                             <p className="text-xs text-secondary mb-3">{movie.genre}</p>
-                                             <div className="flex flex-wrap gap-2 mt-auto mb-4">
-                                                 {movie.showtimes.map(time => (
-                                                     <span key={time} className="bg-gray-100 text-dark text-xs font-bold px-2 py-1 rounded border border-gray-200">{time}</span>
-                                                 ))}
-                                             </div>
-                                             <button onClick={() => setSelectedMovie(movie)} className="w-full bg-dark text-white py-2 rounded-xl font-bold text-sm hover:bg-black transition-colors">Купить билет</button>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
-                         </div>
-                     ) : (
-                         <>
-                             {premiumAds.length > 0 && !searchQuery && !subCategoryFilter && (
-                                 <div className="mb-8">
-                                     <h2 className="text-lg font-bold text-dark mb-4 flex items-center gap-2">
-                                         <span className="text-yellow-500">★</span> VIP объявления
-                                     </h2>
-                                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-                                         {premiumAds.map(ad => (
-                                             <div key={ad.id} className="h-full">
-                                                 <AdCard ad={ad} onShow={setSelectedAd} variant="premium" isFavorite={favorites.includes(ad.id)} onToggleFavorite={toggleFavorite} />
-                                             </div>
-                                         ))}
-                                     </div>
-                                 </div>
-                             )}
-                             <div>
-                                 <h2 className="text-lg font-bold text-dark mb-4">
-                                     {searchQuery ? 'Результаты поиска' : 'Свежие объявления'}
-                                 </h2>
-                                 {standardAds.length === 0 && premiumAds.length === 0 ? (
-                                     <div className="text-center py-20 text-secondary">
-                                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">😔</div>
-                                         <p className="text-lg font-medium">Ничего не найдено</p>
-                                         <p className="text-sm">Попробуйте изменить параметры поиска</p>
-                                     </div>
-                                 ) : (
-                                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-                                         {(searchQuery || subCategoryFilter || filters.maxPrice ? filteredAds : standardAds).map(ad => (
-                                             <div key={ad.id} className="h-full">
-                                                 <AdCard ad={ad} onShow={setSelectedAd} isFavorite={favorites.includes(ad.id)} onToggleFavorite={toggleFavorite} />
-                                             </div>
-                                         ))}
-                                     </div>
-                                 )}
-                             </div>
-                         </>
-                     )}
-                  </div>
-               )}
-            </main>
-         </div>
-      </div>
-
-      <CreateAdModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateAd} catalog={SERVICE_CATALOG} />
-      <PartnerModal isOpen={isPartnerModalOpen} onClose={() => setIsPartnerModalOpen(false)} />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <ServiceCatalogModal isOpen={isCatalogOpen} onClose={() => setIsCatalogOpen(false)} catalog={SERVICE_CATALOG} onSelect={(cat, sub) => { handleTabChange(cat); setSubCategoryFilter(sub); }} initialCategory={activeTab === 'news' || activeTab === 'all' ? 'sale' : activeTab as Category} />
-      {user && (
-          <UserProfileModal isOpen={isUserProfileOpen} onClose={() => setIsUserProfileOpen(false)} user={user} onLogout={async () => { if(supabase) await supabase.auth.signOut(); setUser(null); }} favorites={favorites} allAds={ads} onToggleFavorite={toggleFavorite} onShowAd={setSelectedAd} onUpdateUser={handleUpdateUser} onOpenAdminPanel={() => { setIsUserProfileOpen(false); setIsAdminPanelOpen(true); }} onOpenMerchantDashboard={() => { setIsUserProfileOpen(false); setIsMerchantDashboardOpen(true); if (user.managedShopId) { const shop = allShops.find(s => s.id === user.managedShopId); if (shop) setSelectedShop(shop); } }} />
+      {user.managedShopId && (
+          <MerchantDashboard
+             isOpen={isMerchantDashboardOpen}
+             onClose={() => setIsMerchantDashboardOpen(false)}
+             shop={[...shops, ...cafes, ...gyms].find(s => s.id === user.managedShopId) || shops[0]} // Fallback or find specific
+             onUpdateShop={(updated) => {
+                 setShops(prev => prev.map(s => s.id === updated.id ? updated : s));
+                 setCafes(prev => prev.map(c => c.id === updated.id ? updated : c));
+                 setGyms(prev => prev.map(g => g.id === updated.id ? updated : g));
+             }}
+             movies={user.managedShopId === 'cinema1' ? movies : undefined}
+             onUpdateMovies={user.managedShopId === 'cinema1' ? setMovies : undefined}
+          />
       )}
-      {user && user.isAdmin && (
-          <AdminPanel isOpen={isAdminPanelOpen} onClose={() => setIsAdminPanelOpen(false)} ads={ads} onUpdateAdStatus={handleUpdateAdStatus} onUpdateAdContent={handleUpdateAdContent} onAddNews={handleAddNews} />
-      )}
-      {user && user.managedShopId && (
-          <MerchantDashboard isOpen={isMerchantDashboardOpen} onClose={() => setIsMerchantDashboardOpen(false)} shop={allShops.find(s => s.id === user.managedShopId) || shops[0]} onUpdateShop={(updated) => { if (updated.id.includes('c') && !updated.id.includes('cinema')) { } else { handleUpdateShop(updated); } }} movies={user.managedShopId.includes('cinema') ? movies : undefined} onUpdateMovies={user.managedShopId.includes('cinema') ? setMovies : undefined} />
-      )}
-      <MovieBookingModal isOpen={!!selectedMovie} onClose={() => setSelectedMovie(null)} movie={selectedMovie} />
-      <ProductDetailsModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onAddToCart={addToCart} />
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} shops={allShops} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} />
+
     </div>
   );
-}
+};
+
+export default App;

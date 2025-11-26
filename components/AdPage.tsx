@@ -10,9 +10,11 @@ interface AdPageProps {
   onBack: () => void;
   onAddReview: (adId: string, rating: number, text: string) => void;
   onOpenChat: (session: ChatSession) => void;
+  isLoggedIn: boolean;
+  onRequireLogin: () => void;
 }
 
-export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenChat }) => {
+export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenChat, isLoggedIn, onRequireLogin }) => {
   const [activeImage, setActiveImage] = useState(ad.image);
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -24,7 +26,46 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
     window.scrollTo(0, 0);
   }, [ad]);
 
-  const formattedPhone = formatPhoneNumber(ad.contact);
+  // Mask phone for guests
+  const getDisplayPhone = () => {
+      if (!isLoggedIn) return formatPhoneNumber(ad.contact).substring(0, 7) + ' ... .. ..';
+      return formatPhoneNumber(ad.contact);
+  };
+
+  const handleContactClick = (e: React.MouseEvent, type: 'phone' | 'chat') => {
+      e.preventDefault();
+      if (!isLoggedIn) {
+          onRequireLogin();
+          return;
+      }
+      
+      if (type === 'phone') {
+           window.location.href = `tel:${ad.contact}`;
+      } else {
+          onOpenChat({
+            adId: ad.id,
+            adTitle: ad.title,
+            category: ad.category,
+            subCategory: ad.subCategory
+        });
+      }
+  };
+
+  const handleReviewClick = () => {
+      if(!isLoggedIn) {
+          onRequireLogin();
+          return;
+      }
+      setIsReviewsModalOpen(true);
+  };
+
+  const handleBookingClick = () => {
+      if (!isLoggedIn) {
+          onRequireLogin();
+          return;
+      }
+      setIsBookingModalOpen(true);
+  };
 
   const rating = ad.reviews && ad.reviews.length > 0 
     ? (ad.reviews.reduce((acc, r) => acc + r.rating, 0) / ad.reviews.length).toFixed(1) 
@@ -49,15 +90,6 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
        navigator.clipboard.writeText(`${ad.title} - ${ad.price}₽\n${safeUrl}`);
        alert('Ссылка скопирована!');
     }
-  };
-
-  const handleStartChat = () => {
-      onOpenChat({
-          adId: ad.id,
-          adTitle: ad.title,
-          category: ad.category,
-          subCategory: ad.subCategory
-      });
   };
 
   // Shared Action Card Component
@@ -88,7 +120,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
         </div>
 
         <div className="space-y-4">
-           <div className="flex items-center gap-3 mb-2 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => setIsReviewsModalOpen(true)}>
+           <div className="flex items-center gap-3 mb-2 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors" onClick={handleReviewClick}>
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center text-white font-bold text-xl shadow-md">
                  {ad.contact.charAt(0)}
               </div>
@@ -114,7 +146,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
 
            {ad.bookingAvailable && (
              <button 
-               onClick={() => setIsBookingModalOpen(true)}
+               onClick={handleBookingClick}
                className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-4 rounded-xl shadow-lg shadow-violet-200 hover:shadow-xl hover:scale-[1.02] transition-all active:scale-95 flex flex-col items-center justify-center group relative overflow-hidden"
              >
                 <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -126,19 +158,20 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
              </button>
            )}
 
-           <a 
-             href={`tel:${ad.contact}`}
-             className="w-full bg-primary text-white py-4 rounded-xl shadow-lg shadow-primary/30 hover:bg-primary-dark hover:shadow-xl transition-all active:scale-95 flex flex-col items-center justify-center group"
+           <button 
+             onClick={(e) => handleContactClick(e, 'phone')}
+             className={`w-full text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex flex-col items-center justify-center group
+                ${isLoggedIn ? 'bg-primary shadow-primary/30 hover:bg-primary-dark' : 'bg-gray-800 shadow-gray-400/30 hover:bg-gray-900'}`}
            >
               <div className="flex items-center gap-2 mb-1">
                   <svg className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                  <span className="font-medium text-lg">Позвонить</span>
+                  <span className="font-medium text-lg">{isLoggedIn ? 'Позвонить' : 'Показать номер'}</span>
               </div>
-              <span className="text-xl font-bold tracking-wider">{formattedPhone}</span>
-           </a>
+              <span className="text-xl font-bold tracking-wider">{getDisplayPhone()}</span>
+           </button>
            
            <button 
-             onClick={handleStartChat}
+             onClick={(e) => handleContactClick(e, 'chat')}
              className="w-full bg-gray-100 text-dark font-bold text-lg py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
            >
               <svg className="w-6 h-6 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
@@ -147,6 +180,12 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
         </div>
 
         <div className="mt-6 pt-4 border-t border-gray-100 text-xs text-secondary space-y-2">
+           {!isLoggedIn && (
+               <p className="flex items-start gap-2 text-primary font-bold">
+                   <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                   Авторизуйтесь, чтобы видеть контакты
+               </p>
+           )}
            <p className="flex items-start gap-2">
               <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               Не отправляйте предоплату, если не уверены в продавце.
@@ -164,7 +203,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
           onClick={onBack}
           className="hover:text-primary transition-colors flex items-center gap-1 font-medium"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7 7-7" /></svg>
           Назад к поиску
         </button>
         <span className="text-gray-300">/</span>

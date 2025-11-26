@@ -16,10 +16,11 @@ interface UserProfileModalProps {
   onUpdateUser: (user: User) => void;
   onOpenAdminPanel: () => void;
   onOpenMerchantDashboard: () => void;
+  onOpenPartnerModal?: () => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ 
-  isOpen, onClose, user, onLogout, favorites, allAds, onToggleFavorite, onShowAd, onUpdateUser, onOpenAdminPanel, onOpenMerchantDashboard
+  isOpen, onClose, user, onLogout, favorites, allAds, onToggleFavorite, onShowAd, onUpdateUser, onOpenAdminPanel, onOpenMerchantDashboard, onOpenPartnerModal
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'favorites' | 'orders' | 'my_ads'>('profile');
   const [name, setName] = useState(user.name || '');
@@ -179,6 +180,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       {user.managedShopId && (
                            <button onClick={onOpenMerchantDashboard} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Бизнес Кабинет</button>
                       )}
+                      {/* Note: Partner Modal button removed from mobile profile as requested to be in sidebar on desktop */}
                   </div>
 
                   <div className="space-y-4">
