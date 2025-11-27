@@ -24,6 +24,7 @@ import { MobileSearchModal } from './components/MobileSearchModal';
 import { SplashScreen } from './components/SplashScreen';
 import { supabase } from './services/supabaseClient';
 import { formatPhoneNumber } from './utils';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // ... (KEEP INITIAL DATA AS IS) ...
 const INITIAL_ADS: Ad[] = [
@@ -512,6 +513,7 @@ const INITIAL_CAFES: Shop[] = [
     }
 ];
 
+// ... (KEEP CATALOG & NAV ITEMS AS IS) ...
 const CATALOG: CatalogCategory[] = [
   {
     id: 'sale',
@@ -552,7 +554,6 @@ const CATALOG: CatalogCategory[] = [
   }
 ];
 
-// Reused Navigation Items
 const NAV_ITEMS = [
     { id: 'all', label: 'Главная', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
     { id: 'news', label: 'Новости', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg> },
@@ -566,7 +567,7 @@ const NAV_ITEMS = [
     { id: 'emergency', label: 'Экстренные', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> },
 ];
 
-// Mock user - in reality this would come from auth
+// ... (KEEP DEFAULT USER & ERROR HELPER AS IS) ...
 const DEFAULT_USER: User = {
   id: 'guest',
   email: 'guest@snezhinsk.ru',
@@ -576,7 +577,6 @@ const DEFAULT_USER: User = {
   xp: 0
 };
 
-// Improved helper to safely extract error messages
 const getSafeErrorMessage = (error: unknown): string => {
     if (!error) return 'Неизвестная ошибка';
     if (typeof error === 'string') return error;
@@ -584,14 +584,11 @@ const getSafeErrorMessage = (error: unknown): string => {
     
     if (typeof error === 'object') {
         const errObj = error as any;
-        // Check common Supabase/API error fields
         if (errObj.message) return errObj.message;
         if (errObj.error_description) return errObj.error_description;
         if (errObj.details) return errObj.details;
         if (errObj.msg) return errObj.msg;
         if (errObj.code) return `Код ошибки: ${errObj.code}`;
-        
-        // Return generic message instead of risking [object Object] via bad stringification
         return 'Ошибка соединения с сервером';
     }
     return String(error);
@@ -603,11 +600,11 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false); // Mobile Search State
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
@@ -629,68 +626,110 @@ const App: React.FC = () => {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isMerchantDashboardOpen, setIsMerchantDashboardOpen] = useState(false);
   
-  // Dashboard Data
   const [shops, setShops] = useState<Shop[]>(INITIAL_SHOPS);
   const [cafes, setCafes] = useState<Shop[]>(INITIAL_CAFES);
   const [gyms, setGyms] = useState<Shop[]>(INITIAL_GYMS);
   const [movies, setMovies] = useState<Movie[]>(INITIAL_MOVIES);
 
-  // Edit Ad State
   const [adToEdit, setAdToEdit] = useState<Ad | null>(null);
+  
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Check if we are on mobile
     if (window.innerWidth >= 768) {
-        setShowSplashScreen(false); // Disable splash on desktop immediately
+        setShowSplashScreen(false);
     }
   }, []);
 
   useEffect(() => {
-    // Timer for weather widget
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Persistence for user ads and favorites
+  const { data: fetchedAds } = useQuery({
+    queryKey: ['ads'],
+    queryFn: async () => {
+       const { data, error } = await supabase
+        .from('ads')
+        .select('*') 
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+       if (error) {
+           console.warn('Supabase fetch error (using cache/mock):', getSafeErrorMessage(error));
+           return null;
+       }
+       return data;
+    },
+    staleTime: 1000 * 60 * 5, 
+  });
+
+  // CRITICAL FIX: Ensure local ads are never lost, even if DB is empty or fails
   useEffect(() => {
-    // 1. Load User
+      // If fetching works but returns empty/data, or if it failed (fetchedAds null),
+      // we merge.
+      
+      const dbAds: Ad[] = (fetchedAds || []).map((item: any) => ({
+          id: item.id,
+          userId: item.user_id,
+          authorName: item.author_name,
+          title: item.title,
+          description: item.description,
+          price: item.price,
+          category: item.category,
+          subCategory: item.subcategory,
+          contact: item.contact,
+          location: item.location,
+          image: item.image,
+          isPremium: item.is_premium,
+          date: new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+          status: item.status || 'pending',
+          specs: item.specs || {}
+      }));
+
+      setAds(prev => {
+          const dbIds = new Set(dbAds.map(d => d.id));
+          
+          // Keep local pending ads if NOT in DB
+          const localPending = prev.filter(p => p.status === 'pending' && !dbIds.has(p.id));
+
+          // Keep INITIAL_ADS if NOT in DB
+          const initialAdsFiltered = INITIAL_ADS.filter(initAd => !dbIds.has(initAd.id));
+
+          // Priority: DB > Local Pending > Initial
+          return [...localPending, ...dbAds, ...initialAdsFiltered];
+      });
+  }, [fetchedAds]);
+
+  useEffect(() => {
     try {
         const savedUser = localStorage.getItem('user_data');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
-    } catch (e) { console.warn('LocalStorage error loading user', e); }
+        if (savedUser) setUser(JSON.parse(savedUser));
+    } catch (e) { }
 
-    // 2. Load My Pending Ads (for persistence before DB sync)
     try {
         const pendingAds = localStorage.getItem('my_pending_ads');
         if (pendingAds) {
             const parsed: Ad[] = JSON.parse(pendingAds);
             setAds(prev => {
-                // Merge unique
-                const newIds = new Set(parsed.map(a => a.id));
-                const filteredPrev = prev.filter(p => !newIds.has(p.id));
-                return [...parsed, ...filteredPrev];
+                const currentIds = new Set(prev.map(a => a.id));
+                const uniquePending = parsed.filter(a => !currentIds.has(a.id));
+                return [...uniquePending, ...prev];
             });
         }
-    } catch (e) { console.warn('LocalStorage error loading ads', e); }
+    } catch (e) { }
 
-    // 3. Load Favorites
     try {
         const savedFavs = localStorage.getItem('favorites');
         if (savedFavs) {
             const favIds: string[] = JSON.parse(savedFavs);
             setUser(u => ({ ...u, favorites: favIds }));
         }
-    } catch (e) { console.warn('LocalStorage error loading favorites', e); }
+    } catch (e) { }
 
-    // 4. Check Auth State
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        // Specific user or email-based admin check
         const isAdmin = session.user.email?.includes('admin') || session.user.email === 'hrustalev_1974@mail.ru';
-        
-        // Check if user manages a shop (mock logic)
         let managedShopId = undefined;
         if (session.user.email?.includes('cinema')) managedShopId = 'cinema1';
         if (session.user.email?.includes('shop')) managedShopId = 's1';
@@ -703,7 +742,7 @@ const App: React.FC = () => {
             isAdmin: isAdmin,
             managedShopId: managedShopId,
             name: session.user.user_metadata?.full_name || prev.name,
-            xp: prev.xp || 5 // Restore XP or give login bonus
+            xp: prev.xp || 5
         }));
       }
     });
@@ -723,79 +762,27 @@ const App: React.FC = () => {
              isAdmin: isAdmin,
              managedShopId: managedShopId,
              name: session.user.user_metadata?.full_name || prev.name,
-             xp: prev.xp || 50 // Registration/Login Bonus
+             xp: prev.xp || 50
           }));
        } else {
           setUser(DEFAULT_USER);
        }
     });
 
-    // Mock Weather
     setWeather({ temp: 12, condition: 'Облачно', pressure: 745 });
-
-    // Fetch Ads from Supabase
-    fetchAds();
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Save favorites when they change
   useEffect(() => {
     try {
         localStorage.setItem('favorites', JSON.stringify(user.favorites || []));
-    } catch (e) { console.warn('LocalStorage quota exceeded saving favorites'); }
+    } catch (e) { }
   }, [user.favorites]);
 
-  // NEW: Scroll to top on navigation to ensure every new page/tab starts from the top
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [activeCategory, selectedSubCategory, selectedAd, selectedNews, selectedShop, activeChatSession]);
-
-  const fetchAds = async () => {
-      try {
-          const { data, error } = await supabase
-            .from('ads')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-          if (error) {
-              console.warn('Supabase fetch error (using mock data):', getSafeErrorMessage(error));
-              // Suppress UI notification for initial fetch failure to keep UX clean
-              return; 
-          }
-
-          if (data) {
-              const dbAds: Ad[] = data.map((item: any) => ({
-                  id: item.id,
-                  userId: item.user_id,
-                  authorName: item.author_name,
-                  title: item.title,
-                  description: item.description,
-                  price: item.price,
-                  category: item.category,
-                  subCategory: item.subcategory,
-                  contact: item.contact,
-                  location: item.location,
-                  image: item.image,
-                  isPremium: item.is_premium,
-                  date: new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
-                  status: item.status || 'pending', // Default to pending if not set
-                  specs: item.specs || {}
-              }));
-              
-              setAds(prev => {
-                  // Keep pending ads from local state if they are not in DB yet
-                  // BUT replace them if DB has them (even if pending)
-                  const dbIds = new Set(dbAds.map(d => d.id));
-                  const localPending = prev.filter(p => p.status === 'pending' && !dbIds.has(p.id));
-                  return [...localPending, ...dbAds];
-              });
-          }
-      } catch (err: any) {
-          console.warn("Supabase connection error (using mock data)", getSafeErrorMessage(err));
-          // Suppress UI notification for network error on load
-      }
-  };
 
   const addNotification = (note: Notification) => {
       setNotifications(prev => [...prev, note]);
@@ -808,7 +795,6 @@ const App: React.FC = () => {
   const addXp = (amount: number, reason: string) => {
     setUser(prev => {
         const newXp = (prev.xp || 0) + amount;
-        // Save to local storage for persistence in this demo
         try {
             localStorage.setItem('user_data', JSON.stringify({ ...prev, xp: newXp }));
         } catch(e) {}
@@ -822,7 +808,6 @@ const App: React.FC = () => {
   };
 
   const handleCreateAd = async (form: CreateAdFormState) => {
-    // Process specs: convert strings to numbers
     const specs: Ad['specs'] = {};
     if (form.specs) {
         if (form.specs.year) specs.year = Number(form.specs.year);
@@ -836,7 +821,6 @@ const App: React.FC = () => {
 
     const adId = adToEdit ? adToEdit.id : Date.now().toString();
 
-    // Optimistic UI Update
     const newAd: Ad = {
       id: adId,
       userId: user.id,
@@ -849,49 +833,40 @@ const App: React.FC = () => {
       contact: form.contact,
       location: form.location,
       image: form.images[0] || 'https://via.placeholder.com/300',
-      images: form.images, // Pass all images
+      images: form.images,
       isPremium: form.isPremium,
       date: adToEdit ? adToEdit.date : 'Только что',
-      status: 'pending', // Optimistically show as pending (or keep current if editing logic allows)
+      status: 'pending',
       reviews: adToEdit ? adToEdit.reviews : [],
       specs: specs
     };
 
-    // 1. Update UI immediately
     if (adToEdit) {
          setAds(prev => prev.map(a => a.id === adId ? newAd : a));
     } else {
          setAds(prev => [newAd, ...prev]);
-         // Award XP for creating ad
          addXp(20, 'Публикация объявления');
     }
     
-    // 2. Save to Local Storage (Backup) - WRAPPED IN TRY-CATCH
     try {
         const currentPending = JSON.parse(localStorage.getItem('my_pending_ads') || '[]');
-        // Remove old if exists
         const filteredPending = currentPending.filter((a:Ad) => a.id !== adId);
         localStorage.setItem('my_pending_ads', JSON.stringify([newAd, ...filteredPending]));
     } catch (e) {
-        console.warn('LocalStorage quota exceeded. Pending ad not backed up locally, but proceeding with submission.', e);
-        // Optional: Attempt to save without heavy images
         try {
             const currentPending = JSON.parse(localStorage.getItem('my_pending_ads') || '[]');
             const filteredPending = currentPending.filter((a:Ad) => a.id !== adId);
-            const lightAd = { ...newAd, image: '', images: [] }; // Strip images for backup
+            const lightAd = { ...newAd, image: '', images: [] };
             localStorage.setItem('my_pending_ads', JSON.stringify([lightAd, ...filteredPending]));
         } catch (ignored) {}
     }
 
     addNotification({ id: Date.now(), message: adToEdit ? 'Объявление обновлено' : 'Объявление отправлено на модерацию!', type: 'success' });
 
-    // Reset edit state
     setAdToEdit(null);
 
-    // 3. Send to Supabase
     try {
         if (adToEdit) {
-            // Update logic (mock for now, or supabase update)
              const { error } = await supabase
             .from('ads')
             .update({
@@ -905,12 +880,10 @@ const App: React.FC = () => {
                 image: form.images[0] || '',
                 is_premium: form.isPremium,
                 specs: specs,
-                // images: form.images -- TODO: Ensure DB supports array
             })
             .eq('id', adId);
             if (error) throw error;
         } else {
-             // Insert
             const { error } = await supabase
             .from('ads')
             .insert({
@@ -927,19 +900,14 @@ const App: React.FC = () => {
                 is_premium: form.isPremium,
                 status: 'pending',
                 specs: specs,
-                // images: form.images -- TODO: Ensure DB supports array
             });
             if (error) throw error;
         }
         
-        // Re-fetch to sync
-        fetchAds();
+        queryClient.invalidateQueries({ queryKey: ['ads'] });
 
     } catch (err: any) {
         console.error("Failed to save ad to DB:", err);
-        const errMsg = getSafeErrorMessage(err);
-        // addNotification({ id: Date.now(), message: 'Ошибка сохранения: ' + errMsg, type: 'error' });
-        // Suppress for demo if DB isn't connected
     }
   };
 
@@ -950,16 +918,12 @@ const App: React.FC = () => {
 
   const handleAddToCart = (product: Product, quantity: number) => {
      setCart(prev => {
-         // Check if item exists (same id AND same shop - though id usually unique)
          const existing = prev.find(item => item.id === product.id);
          if (existing) {
              return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
          }
-         // Find which shop this product belongs to
          let shopId = 'unknown';
-         // combine all shops including cafes and gyms
          const allShops = [...shops, ...cafes, ...gyms]; 
-         
          const ownerShop = allShops.find(s => s.products.some(p => p.id === product.id));
          if (ownerShop) shopId = ownerShop.id;
 
@@ -982,9 +946,7 @@ const App: React.FC = () => {
       setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  // WRAPPED HANDLERS FOR AUTH GATEKEEPING
   const handleShowAd = (ad: Ad) => {
-      // Allows everyone to see details
       setSelectedAd(ad);
   };
 
@@ -998,7 +960,6 @@ const App: React.FC = () => {
         : [...(user.favorites || []), id];
       
       setUser({ ...user, favorites: newFavs });
-      // Saved to localStorage via useEffect
   };
 
   const handleOpenShop = (shopId: string) => {
@@ -1007,27 +968,21 @@ const App: React.FC = () => {
   };
   
   const handleBackFromShop = () => {
-    // If we were in cinema, go back to cinema main view
     if (selectedShop?.id === 'cinema1') {
         setSelectedShop(null);
         setActiveCategory('cinema');
         return;
     }
-    // Default back
     setSelectedShop(null);
   };
 
-  // Helper to determine shop variant
   const getShopVariant = (shop: Shop): 'cinema' | 'cafe' | 'shop' => {
       if (shop.id.includes('cinema')) return 'cinema';
       if (cafes.some(c => c.id === shop.id)) return 'cafe';
       return 'shop';
   };
 
-
   // --- Views ---
-
-  // Taxi View
   const TaxiView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
        {TAXI_SERVICES.map(taxi => (
@@ -1053,7 +1008,6 @@ const App: React.FC = () => {
     </div>
   );
 
-  // Medicine View
   const MedicineView = () => (
       <div className="space-y-4 animate-fade-in-up">
           {MEDICINE_SERVICES.map(place => (
@@ -1077,7 +1031,6 @@ const App: React.FC = () => {
       </div>
   );
 
-  // Emergency View
   const EmergencyView = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
           {EMERGENCY_NUMBERS.map(num => (
@@ -1094,7 +1047,6 @@ const App: React.FC = () => {
       </div>
   );
 
-  // Culture View
   const CultureView = () => (
       <div className="space-y-6 animate-fade-in-up">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1131,26 +1083,194 @@ const App: React.FC = () => {
                     </div>
                  </div>
              ))}
-             {news.filter(n => n.category === 'Культура').length === 0 && (
-                 <p className="text-secondary text-sm">Новостей пока нет.</p>
-             )}
           </div>
       </div>
   );
 
   const renderContent = () => {
-    // 1. Taxi
+    // 0. Global Search (Desktop Only)
+    // Mobile search is handled by MobileSearchModal. Desktop input sets searchQuery directly.
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        
+        // Smart Search (Keywords)
+        const isMedicine = q.includes('больниц') || q.includes('врач') || q.includes('аптек');
+        const isFood = q.includes('еда') || q.includes('кафе') || q.includes('пицц');
+
+        // Search Ads
+        const foundAds = ads.filter(ad => 
+            (ad.title.toLowerCase().includes(q) || ad.description.toLowerCase().includes(q)) &&
+            (ad.status === 'approved' || ad.userId === user.id)
+        );
+
+        // Search News
+        const foundNews = news.filter(n => 
+            n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q)
+        );
+
+        // Search Places
+        const allShops = [...shops, ...cafes, ...gyms];
+        const foundShops = allShops.filter(s => 
+            s.name.toLowerCase().includes(q) || 
+            s.description.toLowerCase().includes(q) ||
+            (isMedicine && s.id.includes('med')) ||
+            (isFood && s.id.includes('c'))
+        );
+
+        const foundProducts: { product: Product, shop: Shop }[] = [];
+        allShops.forEach(shop => {
+            shop.products.forEach(p => {
+                if (p.title.toLowerCase().includes(q)) {
+                    foundProducts.push({ product: p, shop });
+                }
+            });
+        });
+
+        const foundMovies = movies.filter(m => 
+            m.title.toLowerCase().includes(q)
+        );
+        
+        return (
+            <div className="space-y-10 animate-fade-in-up pb-10">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-dark">Результаты поиска</h2>
+                    <button onClick={() => setSearchQuery('')} className="text-sm text-primary font-bold hover:underline">
+                        Очистить
+                    </button>
+                </div>
+
+                {foundAds.length === 0 && foundNews.length === 0 && foundShops.length === 0 && foundMovies.length === 0 && foundProducts.length === 0 && (
+                     <div className="flex flex-col items-center justify-center py-20 text-center text-secondary">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <p className="text-lg font-medium text-dark">Ничего не найдено</p>
+                        <p className="text-sm">Попробуйте изменить запрос</p>
+                    </div>
+                )}
+
+                {foundShops.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-secondary mb-4 uppercase tracking-wider flex items-center gap-2">
+                             <span className="w-2 h-2 rounded-full bg-primary"></span>
+                             Места и Заведения
+                             <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full text-dark">{foundShops.length}</span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {foundShops.map(shop => (
+                                <ShopCard key={shop.id} shop={shop} onClick={setSelectedShop} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {foundProducts.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-secondary mb-4 uppercase tracking-wider flex items-center gap-2">
+                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                             Товары и Услуги
+                             <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full text-dark">{foundProducts.length}</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {foundProducts.map(({product, shop}) => (
+                                <div 
+                                    key={product.id} 
+                                    onClick={() => setSelectedProduct(product)}
+                                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-all group"
+                                >
+                                    <div className="aspect-square relative overflow-hidden bg-gray-50">
+                                        <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-[10px] text-secondary mb-1 truncate">{shop.name}</p>
+                                        <h4 className="font-bold text-dark text-sm leading-tight mb-2 line-clamp-2">{product.title}</h4>
+                                        <span className="text-primary font-bold text-sm">{product.price} ₽</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {foundMovies.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-secondary mb-4 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                            Кино
+                            <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full text-dark">{foundMovies.length}</span>
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {foundMovies.map(movie => (
+                                <div key={movie.id} onClick={() => setActiveMovie(movie)} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex gap-4 cursor-pointer hover:shadow-md transition-all">
+                                    <div className="w-16 h-24 bg-gray-200 rounded-lg overflow-hidden shrink-0">
+                                        <img src={movie.image} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-dark">{movie.title}</h4>
+                                        <p className="text-xs text-secondary mb-2">{movie.genre}</p>
+                                        <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">Сеансы: {movie.showtimes[0]}...</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {foundAds.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-secondary mb-4 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                            Объявления
+                            <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full text-dark">{foundAds.length}</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+                            {foundAds.map(ad => (
+                                <AdCard 
+                                    key={ad.id} 
+                                    ad={ad} 
+                                    onShow={handleShowAd}
+                                    isFavorite={user.favorites?.includes(ad.id)}
+                                    onToggleFavorite={handleToggleFavorite}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {foundNews.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-secondary mb-4 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Новости
+                            <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full text-dark">{foundNews.length}</span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {foundNews.map(item => (
+                                <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all flex gap-4">
+                                    <div className="w-24 h-24 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+                                        <img src={item.image} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-blue-500 font-bold uppercase mb-1 block">{item.category}</span>
+                                        <h4 className="font-bold text-dark leading-tight mb-2 line-clamp-2">{item.title}</h4>
+                                        <p className="text-xs text-secondary line-clamp-2">{item.excerpt}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     if (activeCategory === 'taxi') return <TaxiView />;
-    // 2. Medicine
     if (activeCategory === 'medicine') return <MedicineView />;
-    // 3. Emergency
     if (activeCategory === 'emergency') return <EmergencyView />;
-    // 4. Culture
     if (activeCategory === 'culture') return <CultureView />;
 
-    // 5. Shops
     if (activeCategory === 'shops') {
-        const filteredShops = shops.filter(s => !s.id.includes('cinema')); // Exclude cinema from shops list
+        const filteredShops = shops.filter(s => !s.id.includes('cinema'));
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
                 {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onClick={setSelectedShop} />)}
@@ -1158,7 +1278,6 @@ const App: React.FC = () => {
         );
     }
     
-    // 6. Cafes
     if (activeCategory === 'cafes') {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
@@ -1167,7 +1286,6 @@ const App: React.FC = () => {
         );
     }
 
-    // 7. Gyms
     if (activeCategory === 'gyms') {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in-up">
@@ -1176,7 +1294,6 @@ const App: React.FC = () => {
         );
     }
 
-    // 8. Cinema
     if (activeCategory === 'cinema') {
         return (
             <div className="space-y-8 animate-fade-in-up">
@@ -1186,7 +1303,7 @@ const App: React.FC = () => {
                         <h2 className="text-3xl font-bold mb-2">Кинотеатр "Космос"</h2>
                         <p className="text-indigo-200 mb-6 max-w-lg">Смотрите новинки кино в лучшем качестве. Покупайте билеты онлайн без очередей.</p>
                         <button 
-                            onClick={() => handleOpenShop('cinema1')} // Open cinema shop page for bar
+                            onClick={() => handleOpenShop('cinema1')}
                             className="bg-white text-indigo-900 font-bold py-3 px-6 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
                         >
                             Бар кинотеатра
@@ -1232,7 +1349,6 @@ const App: React.FC = () => {
         );
     }
 
-    // 9. News
     if (activeCategory === 'news') {
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
@@ -1268,33 +1384,20 @@ const App: React.FC = () => {
     // 10. Ads List (Default)
     let filteredAds = ads;
     
-    // Filter logic:
-    // 1. By Search Query
-    if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredAds = filteredAds.filter(ad => 
-            ad.title.toLowerCase().includes(query) || 
-            ad.description.toLowerCase().includes(query)
-        );
-    }
-
-    // 2. By Category/SubCategory (only if not searching broadly)
-    if (activeCategory !== 'all' && !searchQuery) {
+    if (activeCategory !== 'all') {
         filteredAds = filteredAds.filter(ad => ad.category === activeCategory);
     }
-    if (selectedSubCategory && !searchQuery) {
+    if (selectedSubCategory) {
         filteredAds = filteredAds.filter(ad => ad.subCategory === selectedSubCategory);
     }
 
-    // 3. By Status (Hide pending/rejected unless it's MY ad)
-    // "My ad" check uses userId.
+    // Filter by Status (Approved or Owned)
+    // FIX: Fallback to approved for legacy data without status
     filteredAds = filteredAds.filter(ad => {
-        if (ad.status === 'approved') return true;
-        // If pending/rejected, show ONLY if it belongs to current user
-        return ad.userId === user.id || (user.id === 'guest' && ad.userId === undefined /* legacy */);
+        if (ad.status === 'approved' || !ad.status) return true;
+        return ad.userId === user.id || (user.id === 'guest' && ad.userId === undefined);
     });
 
-    // Separate Premium Ads
     const premiumAds = filteredAds.filter(ad => ad.isPremium);
     const regularAds = filteredAds.filter(ad => !ad.isPremium);
 
@@ -1303,7 +1406,6 @@ const App: React.FC = () => {
             {filteredAds.length > 0 ? (
                 <>
                     {premiumAds.length > 0 && (
-                        // VIP CONTAINER CHANGE: Removed padding wrapper to fix width issues
                         <div className="mb-8">
                             <h3 className="text-xl font-bold text-dark mb-4 md:mb-6 flex items-center gap-2 pl-2 md:pl-0">
                                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-white shadow-lg shadow-yellow-200">
@@ -1311,16 +1413,15 @@ const App: React.FC = () => {
                                 </span> 
                                 VIP Объявления
                             </h3>
-                            {/* Same grid layout as regular ads */}
                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
                                 {premiumAds.map((ad) => (
                                     <AdCard 
                                         key={ad.id} 
                                         ad={ad} 
                                         variant="premium"
-                                        onShow={handleShowAd} // WRAPPED
+                                        onShow={handleShowAd}
                                         isFavorite={user.favorites?.includes(ad.id)}
-                                        onToggleFavorite={handleToggleFavorite} // WRAPPED
+                                        onToggleFavorite={handleToggleFavorite}
                                     />
                                 ))}
                             </div>
@@ -1336,9 +1437,9 @@ const App: React.FC = () => {
                                     <AdCard 
                                         key={ad.id} 
                                         ad={ad} 
-                                        onShow={handleShowAd} // WRAPPED
+                                        onShow={handleShowAd}
                                         isFavorite={user.favorites?.includes(ad.id)}
-                                        onToggleFavorite={handleToggleFavorite} // WRAPPED
+                                        onToggleFavorite={handleToggleFavorite}
                                     />
                                 ))}
                              </div>
@@ -1352,7 +1453,7 @@ const App: React.FC = () => {
                     </div>
                     <p className="text-lg font-medium text-dark">Объявлений не найдено</p>
                     <p className="text-sm">Попробуйте изменить категорию или фильтры</p>
-                    {(activeCategory !== 'all' || searchQuery) && (
+                    {(activeCategory !== 'all') && (
                         <button onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); setSearchQuery(''); }} className="mt-4 text-primary font-bold hover:underline">
                             Сбросить фильтры
                         </button>
@@ -1363,7 +1464,6 @@ const App: React.FC = () => {
     );
   };
 
-  // Render Full Pages overrides
   if (selectedAd) {
     return (
         <>
@@ -1372,14 +1472,12 @@ const App: React.FC = () => {
                     ad={selectedAd} 
                     onBack={() => setSelectedAd(null)} 
                     onAddReview={(id, r, t) => {
-                         // Mock Review Add
                          setAds(prev => prev.map(a => {
                              if(a.id === id) {
                                  return { ...a, reviews: [...(a.reviews || []), { id: Date.now().toString(), author: user.name || 'Гость', rating: r, text: t, date: 'Сейчас' }] };
                              }
                              return a;
                          }));
-                         // Award XP for reviewing
                          addXp(15, 'Отзыв');
                     }}
                     onOpenChat={(session) => {
@@ -1393,7 +1491,6 @@ const App: React.FC = () => {
                     onRequireLogin={() => setIsLoginModalOpen(true)}
                 />
             </div>
-            {/* Keeping modal infrastructure active if needed */}
              {activeChatSession && user.isLoggedIn && (
                 <ChatPage 
                     session={activeChatSession} 
@@ -1401,7 +1498,6 @@ const App: React.FC = () => {
                     currentUserId={user.id}
                 />
             )}
-            {/* Consolidated LoginModal - rendered here to overlay AdPage if triggered */}
             <LoginModal 
               isOpen={isLoginModalOpen} 
               onClose={() => setIsLoginModalOpen(false)} 
@@ -1441,11 +1537,10 @@ const App: React.FC = () => {
                  isOpen={isCartOpen} 
                  onClose={() => setIsCartOpen(false)}
                  items={cart}
-                 shops={[...shops, ...cafes, ...gyms]} // Cinema logic handled in CartDrawer via ShopId
+                 shops={[...shops, ...cafes, ...gyms]}
                  onUpdateQuantity={handleUpdateCartQuantity}
                  onRemove={handleRemoveFromCart}
               />
-              {/* Floating Cart Button for Shop Page */}
               {cart.length > 0 && (
                 <div className="fixed bottom-6 right-6 z-40 animate-bounce">
                     <button 
@@ -1467,7 +1562,6 @@ const App: React.FC = () => {
       );
   }
 
-  // Sidebar Component (Desktop Only)
   const Sidebar = () => (
       <aside className="hidden md:flex flex-col w-64 fixed left-0 top-0 bottom-0 bg-white border-r border-gray-100 z-50 p-6 overflow-y-auto">
           <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); }}>
@@ -1514,7 +1608,6 @@ const App: React.FC = () => {
       </aside>
   );
 
-  // Main Layout
   return (
     <div className="min-h-screen bg-background font-sans text-dark pb-24 md:pb-0 relative">
       {showSplashScreen && <SplashScreen onFinish={() => setShowSplashScreen(false)} />}
@@ -1523,17 +1616,14 @@ const App: React.FC = () => {
       <Sidebar />
 
       <div className="md:ml-64 transition-all">
-          {/* Header */}
           <header className="bg-surface/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between gap-4">
               
-              {/* Mobile Logo with Text */}
               <div className="md:hidden flex items-center gap-2 cursor-pointer" onClick={() => { setActiveCategory('all'); setSelectedSubCategory(null); }}>
                  <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">С</div>
                  <span className="font-bold text-lg text-dark ml-1">Твой Снежинск</span>
               </div>
 
-              {/* Desktop Search / Catalog */}
               <div className="hidden md:flex items-center gap-4 flex-grow max-w-2xl">
                   <button 
                     onClick={() => setIsCatalogOpen(true)}
@@ -1556,14 +1646,11 @@ const App: React.FC = () => {
                   </div>
               </div>
 
-              {/* Right Side Actions */}
               <div className="flex items-center gap-3 md:gap-6">
-                 {/* Mobile Search Icon */}
                  <button onClick={() => setIsSearchModalOpen(true)} className="md:hidden p-2 rounded-full hover:bg-gray-100 text-dark">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                  </button>
 
-                 {/* Weather Widget */}
                  {weather && (
                    <div className="flex items-center gap-2 md:gap-3 bg-white px-2 md:px-4 py-1 md:py-2 rounded-xl md:border border-gray-100 md:shadow-sm">
                       <div className="text-right leading-tight hidden md:block">
@@ -1584,7 +1671,7 @@ const App: React.FC = () => {
                  {user.isLoggedIn && (
                      <button 
                         onClick={() => {
-                            setAdToEdit(null); // Ensure not editing old ad
+                            setAdToEdit(null);
                             setIsCreateModalOpen(true);
                         }}
                         className="hidden md:flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95"
@@ -1602,7 +1689,6 @@ const App: React.FC = () => {
                      </div>
                  )}
                  
-                 {/* Desktop Login Button */}
                  {!user.isLoggedIn && (
                      <button onClick={() => setIsLoginModalOpen(true)} className="hidden md:block text-sm font-bold text-dark hover:text-primary transition-colors bg-gray-100 px-4 py-2 rounded-lg">
                         Войти
@@ -1612,12 +1698,10 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          {/* Stories Bar - Visible only on Mobile AND Main Page */}
           <div className="md:hidden max-w-7xl mx-auto px-4 py-4">
              {activeCategory === 'all' && !searchQuery && <StoriesBar stories={INITIAL_STORIES} onOpenShop={handleOpenShop} />}
           </div>
 
-          {/* Sub-Category Filter */}
           {selectedSubCategory && (
               <div className="max-w-7xl mx-auto px-4 md:px-6 mt-4 mb-4 flex items-center gap-2 animate-fade-in-up">
                   <span className="text-sm text-secondary">Фильтр:</span>
@@ -1630,35 +1714,28 @@ const App: React.FC = () => {
               </div>
           )}
 
-          {/* Main Content */}
           <main className="max-w-7xl mx-auto px-4 md:px-6 py-4">
             {renderContent()}
           </main>
       </div>
 
-      {/* Floating Action Button (Mobile) - Reused as 'Add' in Bottom Nav, simplified here */}
-
-      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 flex justify-between items-center z-40 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
         
-        {/* 1. Home */}
         <button onClick={() => setActiveCategory('all')} className={`flex flex-col items-center gap-1 p-2 w-16 ${activeCategory === 'all' ? 'text-primary' : 'text-gray-400'}`}>
            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
            <span className="text-[10px] font-medium">Главная</span>
         </button>
 
-        {/* 2. Catalog (Replaces Cinema) */}
         <button onClick={() => setIsCatalogOpen(true)} className="flex flex-col items-center gap-1 p-2 w-16 text-gray-400">
            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
            <span className="text-[10px] font-medium">Каталог</span>
         </button>
 
-        {/* 3. Add Button (Center FAB) */}
         <div className="relative -top-6">
            <button 
              onClick={() => {
                  if (user.isLoggedIn) {
-                     setAdToEdit(null); // Ensure not editing old ad
+                     setAdToEdit(null);
                      setIsCreateModalOpen(true);
                  } else {
                      setIsLoginModalOpen(true);
@@ -1670,20 +1747,17 @@ const App: React.FC = () => {
            </button>
         </div>
 
-        {/* 4. Menu (Replaces Taxi - Opens Sidebar Drawer) - RENAMED TO CITY */}
         <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-1 p-2 w-16 text-gray-400">
            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
            <span className="text-[10px] font-medium">Город</span>
         </button>
 
-        {/* 5. Profile */}
         <button onClick={() => { if(user.isLoggedIn) setIsUserProfileOpen(true); else setIsLoginModalOpen(true); }} className={`flex flex-col items-center gap-1 p-2 w-16 ${isUserProfileOpen ? 'text-primary' : 'text-gray-400'}`}>
            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
            <span className="text-[10px] font-medium">Профиль</span>
         </button>
       </nav>
 
-      {/* Modals */}
       <CreateAdModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
@@ -1708,7 +1782,6 @@ const App: React.FC = () => {
          }}
       />
 
-      {/* Mobile Menu Drawer */}
       <MobileMenu 
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
@@ -1717,15 +1790,23 @@ const App: React.FC = () => {
         navItems={NAV_ITEMS}
       />
 
-      {/* Mobile Search Modal */}
+      {/* REPLACED: Enhanced Mobile Search with Data Access */}
       <MobileSearchModal 
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         value={searchQuery}
         onChange={(val) => {
             setSearchQuery(val);
-            if (!val) setActiveCategory('all'); // Reset if cleared
         }}
+        ads={ads}
+        shops={[...shops, ...cafes, ...gyms]}
+        news={news}
+        movies={movies}
+        onSelectAd={handleShowAd}
+        onSelectNews={setSelectedNews}
+        onSelectShop={setSelectedShop}
+        onSelectMovie={setActiveMovie}
+        onSelectProduct={setSelectedProduct}
       />
       
       <UserProfileModal
@@ -1740,12 +1821,10 @@ const App: React.FC = () => {
          allAds={ads}
          onToggleFavorite={handleToggleFavorite}
          onShowAd={(ad) => {
-             // If ad is pending and belongs to user, allow showing
              setSelectedAd(ad);
          }}
          onEditAd={handleEditAd}
          onUpdateUser={(u) => {
-             // Mock update user logic
              setUser(u);
              try {
                 localStorage.setItem('user_data', JSON.stringify(u));
@@ -1777,7 +1856,7 @@ const App: React.FC = () => {
          isOpen={isCartOpen} 
          onClose={() => setIsCartOpen(false)}
          items={cart}
-         shops={[...shops, ...cafes, ...gyms]} // Cinema logic handled in CartDrawer via ShopId
+         shops={[...shops, ...cafes, ...gyms]}
          onUpdateQuantity={handleUpdateCartQuantity}
          onRemove={handleRemoveFromCart}
       />
@@ -1787,21 +1866,20 @@ const App: React.FC = () => {
         onClose={() => setIsPartnerModalOpen(false)}
       />
 
-      {/* Admin & Merchant Panels */}
       {user.isAdmin && (
           <AdminPanel
             isOpen={isAdminPanelOpen}
             onClose={() => setIsAdminPanelOpen(false)}
             ads={ads}
             onUpdateAdStatus={async (id, status) => {
-                // Optimistic
                 setAds(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-                // DB
                 await supabase.from('ads').update({ status }).eq('id', id);
+                queryClient.invalidateQueries({ queryKey: ['ads'] });
             }}
             onUpdateAdContent={async (id, fields) => {
                 setAds(prev => prev.map(a => a.id === id ? { ...a, ...fields } : a));
                 await supabase.from('ads').update(fields).eq('id', id);
+                queryClient.invalidateQueries({ queryKey: ['ads'] });
             }}
             onAddNews={(n) => setNews(prev => [n, ...prev])}
           />
@@ -1811,7 +1889,7 @@ const App: React.FC = () => {
           <MerchantDashboard
              isOpen={isMerchantDashboardOpen}
              onClose={() => setIsMerchantDashboardOpen(false)}
-             shop={[...shops, ...cafes, ...gyms].find(s => s.id === user.managedShopId) || shops[0]} // Fallback or find specific
+             shop={[...shops, ...cafes, ...gyms].find(s => s.id === user.managedShopId) || shops[0]}
              onUpdateShop={(updated) => {
                  setShops(prev => prev.map(s => s.id === updated.id ? updated : s));
                  setCafes(prev => prev.map(c => c.id === updated.id ? updated : c));

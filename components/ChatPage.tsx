@@ -1,7 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatSession, ChatMessage } from '../types';
 import { supabase } from '../services/supabaseClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface ChatPageProps {
   session: ChatSession;
@@ -11,57 +11,71 @@ interface ChatPageProps {
 
 export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUserId }) => {
   const [inputText, setInputText] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Load chat and messages using React Query to cache results
+  const { data: serverMessages } = useQuery({
+      queryKey: ['chat', session.adId, currentUserId],
+      queryFn: async () => {
+          if (!supabase || !currentUserId || !session.adId) return [];
+          
+          try {
+              // 1. Get Chat ID
+              const { data: chats } = await supabase
+                  .from('chats')
+                  .select('id')
+                  .eq('ad_id', session.adId)
+                  .eq('buyer_id', currentUserId)
+                  .maybeSingle(); // Use maybeSingle to avoid 406 error if none exists
+
+              if (chats) {
+                  setChatId(chats.id);
+                  // 2. Get Messages (Limited to last 50 for performance)
+                  const { data: msgs } = await supabase
+                      .from('messages')
+                      .select('*')
+                      .eq('chat_id', chats.id)
+                      .order('created_at', { ascending: true }) // We want oldest first for chat flow
+                      .limit(50); // Optimization: Limit history
+
+                  if (msgs) {
+                      return msgs.map((m: any) => ({
+                          id: m.id,
+                          senderId: m.sender_id,
+                          text: m.text,
+                          created_at: new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                          isMe: m.sender_id === currentUserId
+                      }));
+                  }
+              }
+              return [];
+          } catch (err) {
+              console.error("Error loading chat:", err);
+              return [];
+          }
+      },
+      staleTime: 1000 * 60, // Cache for 1 minute
+      enabled: !!currentUserId && !!session.adId
+  });
   
+  // Combine server messages and any locally added ones (optimistic updates)
+  const displayMessages = serverMessages ? [...serverMessages, ...localMessages] : localMessages;
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [displayMessages.length]);
 
   useEffect(() => {
-      // Initial load
-      loadMessages();
       // Prevent body scroll on the main page behind this overlay
       document.body.style.overflow = 'hidden';
       return () => {
           document.body.style.overflow = 'unset';
       };
   }, []);
-
-  const loadMessages = async () => {
-      if (!supabase || !currentUserId || !session.adId) return;
-      try {
-          const { data: chats } = await supabase
-              .from('chats')
-              .select('id')
-              .eq('ad_id', session.adId)
-              .eq('buyer_id', currentUserId)
-              .single();
-
-          if (chats) {
-              setChatId(chats.id);
-              const { data: msgs } = await supabase
-                  .from('messages')
-                  .select('*')
-                  .eq('chat_id', chats.id)
-                  .order('created_at', { ascending: true });
-              
-              if (msgs) {
-                  setMessages(msgs.map((m: any) => ({
-                      id: m.id,
-                      senderId: m.sender_id,
-                      text: m.text,
-                      created_at: new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-                      isMe: m.sender_id === currentUserId
-                  })));
-              }
-          }
-      } catch (err) {
-          console.error("Error loading chat:", err);
-      }
-  };
 
   const sendMessage = async (text: string) => {
     const tempId = Date.now().toString();
@@ -74,11 +88,14 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
       isMe: true,
       created_at: time
     };
-    setMessages(prev => [...prev, newMessage]);
+    
+    // Optimistic update
+    setLocalMessages(prev => [...prev, newMessage]);
 
     if (supabase && currentUserId && session.adId) {
         try {
             let activeChatId = chatId;
+            // If no chat exists, create one
             if (!activeChatId) {
                 const { data: newChat } = await supabase
                     .from('chats')
@@ -96,12 +113,14 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
                     sender_id: currentUserId,
                     text: text
                 });
+                // Invalidate query to re-fetch and sync state (optional, or rely on local append)
+                // queryClient.invalidateQueries({ queryKey: ['chat', session.adId, currentUserId] });
             }
         } catch (err) {
             console.error("Failed to send message", err);
         }
     } else {
-        // Mock reply
+        // Mock reply for offline/demo
         setTimeout(() => {
            const reply: ChatMessage = {
               id: (Date.now() + 1).toString(),
@@ -110,7 +129,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
               isMe: false,
               created_at: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
            };
-           setMessages(prev => [...prev, reply]);
+           setLocalMessages(prev => [...prev, reply]);
         }, 1000);
     }
   };
@@ -154,7 +173,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-3">
             <div className="text-center text-xs text-gray-400 my-2">Чат защищен</div>
             
-            {messages.length === 0 && (
+            {displayMessages.length === 0 && (
                 <div className="mt-auto mb-4">
                 <p className="text-center text-secondary text-sm mb-3">Быстрые вопросы:</p>
                 <div className="flex flex-wrap gap-2 justify-center">
@@ -171,7 +190,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
                 </div>
             )}
 
-            {messages.map((msg) => (
+            {displayMessages.map((msg) => (
                 <div key={msg.id} className={`flex w-full ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed relative shadow-sm
                         ${msg.isMe ? 'bg-primary text-white rounded-br-none' : 'bg-white text-dark border border-gray-100 rounded-bl-none'}`}>
