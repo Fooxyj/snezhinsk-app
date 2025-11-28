@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Ad, Category, CreateAdFormState, NewsItem, User, CatalogCategory, Review, Movie, Shop, Product, CartItem, Story, Notification, ChatSession } from './types';
 import { AdCard } from './components/AdCard';
@@ -212,6 +213,10 @@ const INITIAL_ADS: Ad[] = [
     status: 'approved'
   }
 ];
+
+// ... (Other constants: TAXI_SERVICES, FREIGHT_PROVIDERS, etc. remain the same as previous) ...
+// For brevity, I am not repeating all the constant data arrays here as they are unchanged. 
+// Assume they exist in the file scope as before.
 
 const TAXI_SERVICES = [
   { id: 't1', name: 'Яндекс Go', phone: '', link: 'https://go.yandex.ru/', description: 'Быстрая подача, оплата картой', icon: '🚕' },
@@ -631,7 +636,7 @@ const INITIAL_CAFES: Shop[] = [
         rating: 4.9,
         paymentConfig: { enabled: false, type: 'manual', phone: '+73514621111' },
         products: [
-            { id: 'cof1', title: 'Капучино', price: 180, image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400', description: 'Классический капучино. 300мл.' },
+            { id: 'cof1', title: 'Капучино', price: 180, image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400', description: 'Классическая капучино. 300мл.' },
             { id: 'bak1', title: 'Круассан с миндалем', price: 150, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400', description: 'Свежие круассан с миндальным кремом.' },
             { id: 'bak2', title: 'Сырники', price: 250, image: 'https://images.unsplash.com/photo-1567327613485-fbc7bf196198?w=400', description: 'Домашние сырники со сметаной и джемом.' },
         ]
@@ -819,7 +824,8 @@ const App: React.FC = () => {
               id: item.id,
               userId: item.user_id,
               // Author Name from DB if available, otherwise 'Продавец'
-              authorName: item.author_name || 'Продавец', 
+              authorName: item.author_name || 'Продавец',
+              authorAvatar: item.author_avatar, // Map author avatar
               authorLevel: item.author_level || 1,
               title: item.title,
               description: item.description,
@@ -979,7 +985,8 @@ const App: React.FC = () => {
             images: form.images, // Save all images
             is_premium: form.isPremium,
             specs: specs,
-            author_name: user.name || 'Пользователь' // Save real name
+            author_name: user.name || 'Пользователь', // Save real name
+            author_avatar: user.avatar || '' // Save avatar
         };
 
         if (adToEdit) {
@@ -1082,12 +1089,12 @@ const App: React.FC = () => {
     setSelectedShop(null);
   };
 
-  const handleOpenPublicProfile = (userId: string, userName: string) => {
+  const handleOpenPublicProfile = (userId: string, userName: string, userAvatar?: string) => {
       setPublicProfileUser({
           id: userId,
           name: userName,
           level: 1, 
-          avatar: '', 
+          avatar: userAvatar || '', 
       });
   };
 
@@ -1794,7 +1801,7 @@ const App: React.FC = () => {
 
       <div className="md:ml-64 transition-all">
           <header className="bg-surface/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between gap-4">
+            <div className="max-w-7xl mx-auto px-2 md:px-6 h-16 md:h-20 flex items-center justify-between gap-4">
               
               <div className="md:hidden flex items-center gap-2 cursor-pointer" onClick={() => handleNavigate('all')}>
                  <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">С</div>
@@ -1895,12 +1902,12 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          <div className="md:hidden max-w-7xl mx-auto px-4 py-4">
+          <div className="md:hidden max-w-7xl mx-auto px-2 py-4">
              {activeCategory === 'all' && !searchQuery && <StoriesBar stories={INITIAL_STORIES} onOpenShop={handleOpenShop} />}
           </div>
 
           {selectedSubCategory && (
-              <div className="max-w-7xl mx-auto px-4 md:px-6 mt-4 mb-4 flex items-center gap-2 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto px-2 md:px-6 mt-4 mb-4 flex items-center gap-2 animate-fade-in-up">
                   <span className="text-sm text-secondary">Фильтр:</span>
                   <div className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                       {selectedSubCategory}
@@ -1911,7 +1918,7 @@ const App: React.FC = () => {
               </div>
           )}
 
-          <main className="max-w-7xl mx-auto px-4 md:px-6 py-4">
+          <main className="max-w-7xl mx-auto px-2 md:px-6 py-4">
              {selectedShop ? (
                 <ShopPage 
                     shop={selectedShop} 
@@ -1935,7 +1942,7 @@ const App: React.FC = () => {
                     onOpenChat={(session) => setActiveChatSession(session)}
                     isLoggedIn={user.isLoggedIn}
                     onRequireLogin={() => setIsLoginModalOpen(true)}
-                    onOpenProfile={handleOpenPublicProfile}
+                    onOpenProfile={(userId, userName, userAvatar) => handleOpenPublicProfile(userId, userName, userAvatar)}
                 />
              ) : (
                 renderContent()
