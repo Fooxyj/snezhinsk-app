@@ -90,21 +90,8 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, variant = 'standard', onShow
             </span>
         </div>
 
-        {/* Price */}
-        <div className="mb-1 md:mb-2 flex items-center justify-between">
-          <span className="text-sm md:text-lg font-bold md:font-extrabold text-primary truncate">
-            {ad.price > 0 ? `${ad.price.toLocaleString('ru-RU')} ₽` : 'Договорная'}
-          </span>
-          {rating && (
-            <div className="hidden md:flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
-               <span className="text-yellow-500 text-[10px]">★</span>
-               <span className="text-xs font-bold text-dark">{rating}</span>
-            </div>
-          )}
-        </div>
-
         {/* Title */}
-        <div className="mb-1 flex-grow">
+        <div className="mb-2">
           <h3 className="font-medium md:font-bold text-xs md:text-base text-dark leading-snug group-hover:text-primary transition-colors line-clamp-2" title={ad.title}>
             {ad.title}
           </h3>
@@ -125,8 +112,21 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, variant = 'standard', onShow
            </div>
         )}
 
+        {/* Price - Moved to bottom (before footer) with mt-auto to push it down */}
+        <div className="mt-auto mb-1 flex items-center justify-between">
+          <span className="text-sm md:text-lg font-bold md:font-extrabold text-primary truncate">
+            {ad.price > 0 ? `${ad.price.toLocaleString('ru-RU')} ₽` : 'Договорная'}
+          </span>
+          {rating && (
+            <div className="hidden md:flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
+               <span className="text-yellow-500 text-[10px]">★</span>
+               <span className="text-xs font-bold text-dark">{rating}</span>
+            </div>
+          )}
+        </div>
+
         {/* Footer: Location */}
-        <div className="mt-auto hidden md:flex pt-2 border-t border-gray-100 items-center justify-between">
+        <div className="hidden md:flex pt-2 border-t border-gray-100 items-center justify-between">
           <div className="flex items-center text-[10px] text-secondary font-medium w-full">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -137,7 +137,7 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, variant = 'standard', onShow
         </div>
         
         {/* Mobile: Minimal location */}
-        <div className="md:hidden mt-auto pt-1">
+        <div className="md:hidden pt-1 border-t border-gray-100/50">
              <p className="text-[10px] text-gray-400 truncate">{ad.location}</p>
         </div>
       </div>
