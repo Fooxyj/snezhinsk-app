@@ -818,6 +818,7 @@ const App: React.FC = () => {
           const dbAds: Ad[] = fetchedAds.map((item: any) => ({
               id: item.id,
               userId: item.user_id,
+              // Author Name from DB if available, otherwise 'Продавец'
               authorName: item.author_name || 'Продавец', 
               authorLevel: item.author_level || 1,
               title: item.title,
@@ -828,6 +829,7 @@ const App: React.FC = () => {
               contact: item.contact,
               location: item.location,
               image: item.image,
+              images: item.images, // Load multiple images
               isPremium: item.is_premium,
               bookingAvailable: false, 
               date: new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
@@ -858,6 +860,7 @@ const App: React.FC = () => {
         }
     } catch (e) { }
 
+    // Initial Auth Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const isAdmin = session.user.email?.includes('admin') || session.user.email === 'hrustalev_1974@mail.ru';
@@ -872,12 +875,15 @@ const App: React.FC = () => {
             isLoggedIn: true, 
             isAdmin: isAdmin,
             managedShopId: managedShopId,
+            // Use metadata from Supabase as source of truth
             name: session.user.user_metadata?.full_name || prev.name,
+            avatar: session.user.user_metadata?.avatar_url || prev.avatar,
             xp: prev.xp || 5
         }));
       }
     });
 
+    // Real-time Auth Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
        if (session?.user) {
           const isAdmin = session.user.email?.includes('admin') || session.user.email === 'hrustalev_1974@mail.ru';
@@ -892,7 +898,9 @@ const App: React.FC = () => {
              isLoggedIn: true, 
              isAdmin: isAdmin,
              managedShopId: managedShopId,
+             // Sync profile data from session metadata
              name: session.user.user_metadata?.full_name || prev.name,
+             avatar: session.user.user_metadata?.avatar_url || prev.avatar,
              xp: prev.xp || 50
           }));
        } else {
@@ -959,35 +967,29 @@ const App: React.FC = () => {
     addNotification({ id: Date.now(), message: 'Публикация...', type: 'info' });
 
     try {
+        const payload = {
+            title: form.title,
+            description: form.description,
+            price: Number(form.price),
+            category: form.category,
+            sub_category: form.subCategory,
+            contact: form.contact,
+            location: form.location,
+            image: form.images[0] || '',
+            images: form.images, // Save all images
+            is_premium: form.isPremium,
+            specs: specs,
+            author_name: user.name || 'Пользователь' // Save real name
+        };
+
         if (adToEdit) {
-             await api.ads.update(adToEdit.id, {
-                title: form.title,
-                description: form.description,
-                price: Number(form.price),
-                category: form.category,
-                sub_category: form.subCategory,
-                contact: form.contact,
-                location: form.location,
-                image: form.images[0] || '',
-                is_premium: form.isPremium,
-                specs: specs,
-             });
-            
-            addNotification({ id: Date.now(), message: 'Объявление обновлено!', type: 'success' });
+             await api.ads.update(adToEdit.id, payload);
+             addNotification({ id: Date.now(), message: 'Объявление обновлено!', type: 'success' });
         } else {
             await api.ads.create({
+                ...payload,
                 user_id: user.id,
-                title: form.title,
-                description: form.description,
-                price: Number(form.price),
-                category: form.category,
-                sub_category: form.subCategory,
-                contact: form.contact,
-                location: form.location,
-                image: form.images[0] || '',
-                is_premium: form.isPremium,
                 status: 'pending',
-                specs: specs,
             });
             
             addNotification({ id: Date.now(), message: 'Объявление отправлено на модерацию!', type: 'success' });
@@ -1006,6 +1008,18 @@ const App: React.FC = () => {
   const handleEditAd = (ad: Ad) => {
       setAdToEdit(ad);
       setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteAd = async (adId: string) => {
+      try {
+          await api.ads.delete(adId);
+          setAds(prev => prev.filter(ad => ad.id !== adId));
+          queryClient.invalidateQueries({ queryKey: ['ads'] });
+          addNotification({ id: Date.now(), message: 'Объявление удалено', type: 'success' });
+      } catch (err: any) {
+          console.error(err);
+          addNotification({ id: Date.now(), message: 'Ошибка удаления', type: 'error' });
+      }
   };
 
   const handleAddToCart = (product: Product, quantity: number) => {
@@ -2052,6 +2066,7 @@ const App: React.FC = () => {
              setSelectedAd(ad);
          }}
          onEditAd={handleEditAd}
+         onDeleteAd={handleDeleteAd}
          onUpdateUser={(u) => {
              setUser(u);
              try {

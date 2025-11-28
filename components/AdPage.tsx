@@ -19,6 +19,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
   const [activeImage, setActiveImage] = useState(ad.image);
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   
   const images = ad.images && ad.images.length > 0 ? ad.images : [ad.image];
   const sellerLevel = ad.authorLevel || Math.floor(Math.random() * 4) + 1;
@@ -239,7 +240,10 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
         
         {/* Left Column: Images, Content */}
         <div className="lg:col-span-8 space-y-6">
-           <div className="bg-surface rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative aspect-[4/3] group cursor-zoom-in">
+           <div 
+             className="bg-surface rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative aspect-[4/3] group cursor-zoom-in"
+             onClick={() => setIsLightboxOpen(true)}
+           >
              <img src={activeImage} alt={ad.title} className="w-full h-full object-cover transition-opacity duration-300" />
              <div className="absolute top-4 left-4 flex gap-2">
                 {ad.isPremium && (
@@ -389,6 +393,39 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
            onClose={() => setIsBookingModalOpen(false)}
            ad={ad}
         />
+
+        {/* Lightbox / Full Image Viewer */}
+        {isLightboxOpen && (
+            <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in-up" onClick={() => setIsLightboxOpen(false)}>
+                <button 
+                    onClick={() => setIsLightboxOpen(false)} 
+                    className="absolute top-4 right-4 p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors z-10"
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                
+                <img 
+                    src={activeImage} 
+                    alt="Full View" 
+                    className="max-h-screen max-w-screen object-contain p-4"
+                    onClick={(e) => e.stopPropagation()}
+                />
+
+                {images.length > 1 && (
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 p-4 overflow-x-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
+                        {images.map((img, idx) => (
+                            <img 
+                                key={idx}
+                                src={img}
+                                alt={`Thumbnail ${idx}`}
+                                onClick={() => setActiveImage(img)}
+                                className={`h-16 w-16 object-cover rounded-lg cursor-pointer border-2 transition-all ${activeImage === img ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        )}
       </div>
     </div>
   );

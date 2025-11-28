@@ -4,6 +4,7 @@ import { User, Ad, Order } from '../types';
 import { AdCard } from './AdCard';
 import { getLevelInfo } from '../utils';
 import { api } from '../services/api';
+import { supabase } from '../services/supabaseClient';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface UserProfileModalProps {
   onToggleFavorite: (id: string) => void;
   onShowAd: (ad: Ad) => void;
   onEditAd?: (ad: Ad) => void;
+  onDeleteAd?: (adId: string) => void;
   onUpdateUser: (user: User) => void;
   onOpenAdminPanel: () => void;
   onOpenMerchantDashboard: () => void;
@@ -22,12 +24,13 @@ interface UserProfileModalProps {
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ 
-  isOpen, onClose, user, onLogout, favorites, allAds, onToggleFavorite, onShowAd, onEditAd, onUpdateUser, onOpenAdminPanel, onOpenMerchantDashboard, onOpenPartnerModal
+  isOpen, onClose, user, onLogout, favorites, allAds, onToggleFavorite, onShowAd, onEditAd, onDeleteAd, onUpdateUser, onOpenAdminPanel, onOpenMerchantDashboard, onOpenPartnerModal
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'favorites' | 'orders' | 'my_ads'>('profile');
   const [name, setName] = useState(user.name || '');
   const [avatar, setAvatar] = useState(user.avatar || '');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const levelInfo = getLevelInfo(user.xp || 0);
 
@@ -48,11 +51,35 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
      { id: '1024', date: '14 окт', shopName: 'Олива', total: 650, status: 'processing', itemsString: 'Пицца Пепперони' }
   ];
 
-  const handleSave = () => {
-      const isNewProfile = !user.name;
-      onUpdateUser({ ...user, name, avatar });
-      if (isNewProfile) {
-          alert('Профиль заполнен! +30 XP');
+  const handleSave = async () => {
+      setIsSaving(true);
+      try {
+          // Sync with Supabase Auth Metadata for cross-device sync
+          const { error } = await supabase.auth.updateUser({
+              data: { full_name: name, avatar_url: avatar }
+          });
+          
+          if (error) throw error;
+
+          const isNewProfile = !user.name;
+          onUpdateUser({ ...user, name, avatar });
+          
+          if (isNewProfile) {
+              alert('Профиль заполнен! +30 XP');
+          } else {
+              alert('Профиль обновлен!');
+          }
+      } catch (err: any) {
+          console.error(err);
+          alert('Ошибка сохранения профиля: ' + err.message);
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const handleDelete = (adId: string) => {
+      if (confirm("Вы действительно хотите удалить это объявление?")) {
+          if (onDeleteAd) onDeleteAd(adId);
       }
   };
 
@@ -61,7 +88,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     if (file) {
         setIsUploading(true);
         try {
-            // Use API which handles auth automatically now
             const publicUrl = await api.uploadFile(file, 'images');
             setAvatar(publicUrl);
         } catch (err) {
@@ -82,7 +108,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         
         {/* --- MOBILE LAYOUT HEADER (Visible only on mobile) --- */}
         <div className="md:hidden bg-white p-4 flex flex-col border-b border-gray-100 shrink-0 gap-4 relative">
-             {/* Close Button (Absolute Top Right) */}
              <button 
                 onClick={onClose} 
                 className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors z-10"
@@ -105,7 +130,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
              </div>
              
-             {/* Mobile XP Bar */}
              <div className="w-full">
                 <div className="flex justify-between text-[10px] text-secondary mb-1">
                     <span>XP: {user.xp || 0}</span>
@@ -160,7 +184,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <h2 className="text-xl font-bold text-dark text-center mt-2">{name || `Пользователь`}</h2>
               <p className="text-sm text-secondary">{user.email}</p>
 
-              {/* Desktop XP Bar */}
               <div className="w-full mt-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                   <div className="flex justify-between text-[10px] font-bold text-secondary mb-1">
                       <span>{user.xp || 0} XP</span>
@@ -177,7 +200,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
            </div>
 
            <nav className="space-y-2 flex-grow overflow-y-auto custom-scrollbar">
-              {/* Access Panels */}
               {user.isAdmin && (
                   <button onClick={onOpenAdminPanel} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md hover:scale-[1.02] transition-transform mb-2 group">
                      Админ Панель
@@ -220,7 +242,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                <div className="max-w-md mx-auto md:mx-0">
                   <h2 className="text-2xl font-bold mb-6 hidden md:block">Настройки профиля</h2>
                   
-                  {/* Mobile-only access buttons */}
                   <div className="md:hidden mb-6 space-y-2">
                       {user.isAdmin && (
                           <button onClick={onOpenAdminPanel} className="w-full bg-red-600 text-white py-3 rounded-xl font-bold">Админ Панель</button>
@@ -231,7 +252,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   </div>
 
                   <div className="space-y-4">
-                     {/* Avatar Row (Explicitly First) */}
                      <div>
                          <label className="block text-sm font-bold text-secondary mb-1">Аватар</label>
                          <div className="flex items-center gap-4">
@@ -262,18 +282,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                      <button 
                         onClick={handleSave}
-                        className="bg-primary text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-primary/20 mt-4 hover:bg-primary-dark transition-all active:scale-95 w-full md:w-auto"
+                        disabled={isSaving}
+                        className="bg-primary text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-primary/20 mt-4 hover:bg-primary-dark transition-all active:scale-95 w-full md:w-auto disabled:opacity-70 disabled:cursor-wait"
                      >
-                        Сохранить изменения
+                        {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
                      </button>
                      
-                     {/* Logout Button (At bottom, under Save) */}
                      <div className="mt-8 border-t border-gray-200 pt-4 md:hidden">
                         <button 
                             onClick={() => { onLogout(); onClose(); }}
                             className="w-full bg-red-50 text-red-600 font-bold py-3 px-6 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2"
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                             Выйти из аккаунта
                         </button>
                      </div>
@@ -337,6 +357,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                                     className="bg-gray-100 text-dark px-2 py-1 rounded hover:bg-gray-200 transition-colors"
                                                 >
                                                     Редактировать
+                                                </button>
+                                            )}
+                                            {onDeleteAd && (
+                                                <button 
+                                                    onClick={() => handleDelete(ad.id)}
+                                                    className="text-red-500 hover:text-red-700 font-bold"
+                                                >
+                                                    Удалить
                                                 </button>
                                             )}
                                         </div>

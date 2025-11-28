@@ -86,6 +86,11 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      if (form.images.length + files.length > 5) {
+          alert("Максимум 5 фотографий");
+          return;
+      }
+
       setIsUploading(true);
       const fileArray = Array.from(files) as File[];
       const uploadedUrls: string[] = [];
@@ -332,28 +337,30 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
 
           {/* Photo Upload Section */}
           <div>
-            <label className={labelClass}>Фотографии {form.images.length > 0 && <span className="text-secondary font-normal">({form.images.length} загружено)</span>}</label>
+            <label className={labelClass}>Фотографии {form.images.length > 0 && <span className="text-secondary font-normal">({form.images.length} / 5)</span>}</label>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {/* Upload Button */}
-                <div className={`aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-primary/50 transition-all cursor-pointer relative group ${isUploading ? 'opacity-50 cursor-wait' : ''}`}>
-                    <input 
-                        type="file" 
-                        accept="image/*"
-                        multiple 
-                        disabled={isUploading}
-                        onChange={handleImageUpload} 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-primary/10 transition-colors">
-                        {isUploading ? (
-                             <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        ) : (
-                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        )}
+                {form.images.length < 5 && (
+                    <div className={`aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-primary/50 transition-all cursor-pointer relative group ${isUploading ? 'opacity-50 cursor-wait' : ''}`}>
+                        <input 
+                            type="file" 
+                            accept="image/*"
+                            multiple 
+                            disabled={isUploading}
+                            onChange={handleImageUpload} 
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-primary/10 transition-colors">
+                            {isUploading ? (
+                                <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                            )}
+                        </div>
+                        <span className="text-xs font-semibold">{isUploading ? 'Загрузка...' : 'Добавить'}</span>
                     </div>
-                    <span className="text-xs font-semibold">{isUploading ? 'Загрузка...' : 'Добавить'}</span>
-                </div>
+                )}
 
                 {/* Image Previews */}
                 {form.images.map((img, idx) => (
@@ -376,7 +383,7 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
                     </div>
                 ))}
             </div>
-            <p className="text-xs text-secondary mt-2">Картинки автоматически сжимаются для быстрой загрузки.</p>
+            <p className="text-xs text-secondary mt-2">Картинки автоматически сжимаются для быстрой загрузки. Максимум 5 фото.</p>
           </div>
 
           <div>

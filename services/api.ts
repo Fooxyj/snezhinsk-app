@@ -4,8 +4,8 @@ import { Ad, Category } from '../types';
 import { compressImage } from '../utils';
 
 // Define the fields we actually need for the list view to reduce payload.
-// Explicitly removed author_name to fix "column does not exist" error
-const AD_LIST_FIELDS = 'id, user_id, title, description, price, category, sub_category, contact, location, image, images, is_premium, created_at, status, specs';
+// Added author_name and images to support new requirements
+const AD_LIST_FIELDS = 'id, user_id, author_name, title, description, price, category, sub_category, contact, location, image, images, is_premium, created_at, status, specs';
 
 export const api = {
   // Helper to upload files to Supabase Storage
@@ -112,6 +112,15 @@ export const api = {
         const { error } = await supabase
             .from('ads')
             .update(updates)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    // Delete ad
+    delete: async (id: string) => {
+        const { error } = await supabase
+            .from('ads')
+            .delete()
             .eq('id', id);
         if (error) throw error;
     }
