@@ -120,6 +120,28 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
         fetchPartner();
     }, [session.adId, currentUserId, chatId, session.authorName, session.authorAvatar]);
 
+    // 4. Mark messages as read when chat is opened
+    useEffect(() => {
+        const markAsRead = async () => {
+            if (!chatId || !currentUserId) return;
+
+            try {
+                // Помечаем все непрочитанные сообщения в этом чате как прочитанные
+                // (только те, которые НЕ от текущего пользователя)
+                await supabase
+                    .from('messages')
+                    .update({ read: true, read_at: new Date().toISOString() })
+                    .eq('chat_id', chatId)
+                    .eq('read', false)
+                    .neq('sender_id', currentUserId);
+            } catch (err) {
+                console.error('Error marking messages as read:', err);
+            }
+        };
+
+        markAsRead();
+    }, [chatId, currentUserId]);
+
 
     // 3. Realtime Subscription
     useEffect(() => {

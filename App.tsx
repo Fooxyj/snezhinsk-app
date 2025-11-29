@@ -28,6 +28,7 @@ import { supabase } from './services/supabaseClient';
 import { api } from './services/api';
 import { formatPhoneNumber } from './utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useUnreadMessages } from './useUnreadMessages';
 
 const INITIAL_ADS: Ad[] = [
     {
@@ -813,6 +814,9 @@ const App: React.FC = () => {
     const [adToEdit, setAdToEdit] = useState<Ad | null>(null);
 
     const queryClient = useQueryClient();
+
+    // Подсчет непрочитанных сообщений
+    const { unreadCount } = useUnreadMessages(user.id);
 
     const handleNavigate = (category: Category) => {
         setActiveCategory(category);
@@ -2107,10 +2111,15 @@ const App: React.FC = () => {
                             )}
 
                             {user.isLoggedIn && (
-                                <div onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                                <div onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity relative">
                                     <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-primary to-blue-400 text-white flex items-center justify-center font-bold text-sm overflow-hidden border-2 border-white shadow-md">
                                         {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : user.name?.charAt(0) || user.email.charAt(0)}
                                     </div>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm border-2 border-white">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
                                 </div>
                             )}
 
@@ -2211,9 +2220,14 @@ const App: React.FC = () => {
                     <span className="text-[10px] font-medium">Разместить</span>
                 </button>
 
-                <button onClick={() => { if (user.isLoggedIn) setIsUserProfileOpen(true); else setIsLoginModalOpen(true); }} className={`flex flex-col items-center gap-1 p-2 w-16 ${isUserProfileOpen ? 'text-primary' : 'text-gray-400'}`}>
+                <button onClick={() => { if (user.isLoggedIn) setIsUserProfileOpen(true); else setIsLoginModalOpen(true); }} className={`flex flex-col items-center gap-1 p-2 w-16 relative ${isUserProfileOpen ? 'text-primary' : 'text-gray-400'}`}>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     <span className="text-[10px] font-medium">Профиль</span>
+                    {user.isLoggedIn && unreadCount > 0 && (
+                        <span className="absolute top-1 right-3 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full shadow-sm">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
                 </button>
             </nav>
 
