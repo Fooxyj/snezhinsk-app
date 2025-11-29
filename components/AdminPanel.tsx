@@ -82,6 +82,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
     const handleApplicationAction = async (appId: string, newStatus: 'approved' | 'rejected', app: BusinessApplication) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Пользователь не авторизован');
+                return;
+            }
 
             if (newStatus === 'approved') {
                 // Create business entry with uploaded images
@@ -100,7 +104,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                     .from('managed_businesses')
                     .insert({
                         user_id: app.user_id,
-                        business_type: 'shop', // Default type, can be customized
+                        business_type: app.business_type || 'shop', // Use type from application or default to 'shop'
                         business_name: app.company_name,
                         business_data: businessData,
                         last_edited_by: user?.id
@@ -182,6 +186,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Пользователь не авторизован');
+                return;
+            }
 
             const { data, error } = await supabase
                 .from('news')
@@ -253,7 +261,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                     ${activeTab === 'moderation' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                             Модерация
                             {pendingAds.length > 0 && <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingAds.length}</span>}
                         </button>
@@ -262,7 +270,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                     ${activeTab === 'active_ads' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                             Все объявления
                         </button>
                         <button
@@ -270,7 +278,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                     ${activeTab === 'news' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
                             Новости
                         </button>
                         <button
@@ -278,7 +286,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                             ${activeTab === 'business_apps' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                             Заявки на бизнес
                             {pendingBusinessApps.length > 0 && (
                                 <span className="ml-auto bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
@@ -330,7 +338,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                         <div className="space-y-3 mb-4 border-l-4 border-blue-500 pl-4 bg-blue-50 py-2 rounded-r-lg">
                                                             <h4 className="font-bold text-blue-800 text-sm">Режим редактирования</h4>
                                                             <input
-                                                                className="w-full p-2 rounded border border-gray-300 text-sm"
+                                                                className="w-full p-2 rounded border-gray-300 text-sm"
                                                                 value={editForm.title || ''}
                                                                 onChange={e => setEditForm({ ...editForm, title: e.target.value })}
                                                                 placeholder="Заголовок"
@@ -344,7 +352,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                             />
                                                             <input
                                                                 type="number"
-                                                                className="w-full p-2 rounded border border-gray-300 text-sm"
+                                                                className="w-full p-2 rounded border-gray-300 text-sm"
                                                                 value={editForm.price || ''}
                                                                 onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) })}
                                                                 placeholder="Цена"
@@ -388,7 +396,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                             Одобрить
                                                         </button>
 
-                                                        {!editingAdId && (
+                                                        {editingAdId !== ad.id && (
                                                             <button
                                                                 onClick={() => handleEditClick(ad)}
                                                                 className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
@@ -427,7 +435,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                 {editingAdId === ad.id ? (
                                                     <div className="space-y-3 mb-2 bg-blue-50 p-4 rounded-xl">
                                                         <input
-                                                            className="w-full p-2 rounded border border-gray-300 text-sm"
+                                                            className="w-full p-2 rounded border-gray-300 text-sm"
                                                             value={editForm.title || ''}
                                                             onChange={e => setEditForm({ ...editForm, title: e.target.value })}
                                                         />
@@ -439,7 +447,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                         />
                                                         <input
                                                             type="number"
-                                                            className="w-full p-2 rounded border border-gray-300 text-sm"
+                                                            className="w-full p-2 rounded border-gray-300 text-sm"
                                                             value={editForm.price || ''}
                                                             onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) })}
                                                         />
@@ -455,12 +463,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                         <div className="flex justify-between items-center mt-auto">
                                                             <span className="font-bold text-primary">{ad.price} ₽</span>
                                                             <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() => handleEditClick(ad)}
-                                                                    className="text-blue-600 bg-blue-50 px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-100"
-                                                                >
-                                                                    Редактировать
-                                                                </button>
+                                                                {!editingAdId && (
+                                                                    <button
+                                                                        onClick={() => handleEditClick(ad)}
+                                                                        className="text-blue-600 bg-blue-50 px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-100"
+                                                                    >
+                                                                        Редактировать
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={() => { if (confirm('Удалить объявление?')) onUpdateAdStatus(ad.id, 'rejected'); }}
                                                                     className="text-red-600 bg-red-50 px-3 py-1 rounded-lg text-xs font-bold hover:bg-red-100"
@@ -551,7 +561,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                             value={newsForm.excerpt}
                                             onChange={e => setNewsForm({ ...newsForm, excerpt: e.target.value })}
                                             placeholder="Пара предложений для превью..."
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+                                            className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
                                         ></textarea>
                                     </div>
 
@@ -563,7 +573,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                             value={newsForm.content}
                                             onChange={e => setNewsForm({ ...newsForm, content: e.target.value })}
                                             placeholder="Основной текст статьи..."
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+                                            className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
                                         ></textarea>
                                     </div>
 
@@ -654,6 +664,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                                             if (file) {
                                                                                 setIsUploadingBusinessImage(true);
                                                                                 try {
+                                                                                    const { data: { user } } = await supabase.auth.getUser();
+                                                                                    if (!user) {
+                                                                                        alert('Пользователь не авторизован');
+                                                                                        return;
+                                                                                    }
                                                                                     const url = await api.uploadFile(file, 'business-images');
                                                                                     setBusinessImages(prev => ({ ...prev, avatar: url }));
                                                                                 } catch (err) {
@@ -680,6 +695,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                                             if (file) {
                                                                                 setIsUploadingBusinessImage(true);
                                                                                 try {
+                                                                                    const { data: { user } } = await supabase.auth.getUser();
+                                                                                    if (!user) {
+                                                                                        alert('Пользователь не авторизован');
+                                                                                        return;
+                                                                                    }
                                                                                     const url = await api.uploadFile(file, 'business-images');
                                                                                     setBusinessImages(prev => ({ ...prev, header: url }));
                                                                                 } catch (err) {
@@ -811,5 +831,4 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             </div>
         </div>
     );
-};
 };
