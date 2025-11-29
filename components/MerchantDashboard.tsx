@@ -64,20 +64,25 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ isOpen, on
         if (file) {
             setIsUploading(true);
             try {
-                // Determine bucket based on field or context, but api.uploadFile defaults to 'images'
-                // We should probably use 'business-images' for businesses
                 const bucket = 'business-images';
                 const url = await api.uploadFile(file, bucket);
 
                 setFormData(prev => ({ ...prev, [field]: url }));
+                alert(`✅ ${field === 'avatar' ? 'Аватар' : 'Обложка'} успешно загружен${field === 'avatar' ? '' : 'а'}!`);
             } catch (err: any) {
-                console.error(err);
+                console.error('Image upload error:', err);
                 let msg = 'Ошибка загрузки изображения';
+
                 if (err.message && err.message.includes('BLOCKED_BY_CLIENT')) {
-                    msg = 'Загрузка заблокирована браузером. Отключите AdBlock.';
+                    msg = '🚫 Загрузка заблокирована браузером. Отключите AdBlock или расширения блокировки.';
+                } else if (err.message && err.message.includes('bucket')) {
+                    msg = '⚠️ Хранилище изображений не настроено. Запустите миграцию migration_fix_business_storage.sql';
+                } else if (err.message && err.message.includes('not found')) {
+                    msg = '⚠️ Bucket не найден. Создайте bucket "business-images" в Supabase Storage.';
                 } else if (err.message) {
-                    msg = err.message;
+                    msg = `Ошибка: ${err.message}`;
                 }
+
                 alert(msg);
             } finally {
                 setIsUploading(false);
@@ -90,7 +95,17 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ isOpen, on
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) {
+                alert('Необходимо войти в систему');
+                return;
+            }
+
+            // Проверяем, является ли ID бизнеса валидным UUID
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(shop.id)) {
+                alert('⚠️ Этот бизнес является демонстрационным и не может быть отредактирован.\n\nДля управления реальным бизнесом:\n1. Подайте заявку через "Для бизнеса"\n2. Дождитесь одобрения администратора\n3. После одобрения вы сможете редактировать свой бизнес');
+                return;
+            }
 
             // Update in Supabase
             const businessData = {
@@ -100,7 +115,6 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ isOpen, on
                 hours: formData.workingHours,
                 avatar: formData.logo,
                 header: formData.coverImage,
-                // Keep existing data
                 email: '',
                 contact_person: ''
             };
@@ -118,10 +132,20 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ isOpen, on
 
             onUpdateShop(formData);
             queryClient.invalidateQueries({ queryKey: ['managed_businesses'] });
-            alert('Информация о магазине обновлена!');
+            alert('✅ Информация о бизнесе успешно обновлена!');
         } catch (err: any) {
             console.error('Error updating business:', err);
-            alert('Ошибка сохранения: ' + err.message);
+            let errorMessage = 'Ошибка сохранения: ';
+
+            if (err.message.includes('uuid')) {
+                errorMessage += 'Неверный формат ID бизнеса. Обратитесь к администратору.';
+            } else if (err.message.includes('not found')) {
+                errorMessage += 'Бизнес не найден в базе данных.';
+            } else {
+                errorMessage += err.message;
+            }
+
+            alert(errorMessage);
         }
     };
 
