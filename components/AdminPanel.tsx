@@ -20,6 +20,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
     const [allBusinesses, setAllBusinesses] = useState<any[]>([]);
     const [isLoadingApps, setIsLoadingApps] = useState(false);
     const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(false);
+    const [businessImages, setBusinessImages] = useState<{ avatar?: string, header?: string }>({});
+    const [isUploadingBusinessImage, setIsUploadingBusinessImage] = useState(false);
 
     // News Form State
     const [newsForm, setNewsForm] = useState({
@@ -82,14 +84,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             const { data: { user } } = await supabase.auth.getUser();
 
             if (newStatus === 'approved') {
-                // Create business entry
+                // Create business entry with uploaded images
                 const businessData = {
                     description: app.comment || '',
                     address: '',
                     phone: app.phone,
                     email: app.email,
                     hours: '',
-                    contact_person: app.contact_person
+                    contact_person: app.contact_person,
+                    avatar: businessImages.avatar || '',
+                    header: businessImages.header || ''
                 };
 
                 const { data: businessEntry, error: businessError } = await supabase
@@ -121,6 +125,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
 
             // Refresh list
             fetchBusinessApplications();
+
+            // Clear images
+            setBusinessImages({});
 
             if (newStatus === 'approved') {
                 alert(`Заявка одобрена! Пользователь получил доступ к бизнес-кабинету.`);
@@ -633,116 +640,162 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                 )}
 
                                                 {app.status === 'pending' && (
-                                                    <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                                        <button
-                                                            onClick={() => handleApplicationAction(app.id, 'approved', app)}
-                                                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg transition-colors"
-                                                        >
-                                                            Одобрить
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleApplicationAction(app.id, 'rejected', app)}
-                                                            className="flex-1 bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2 rounded-lg transition-colors"
-                                                        >
-                                                            Отклонить
-                                                        </button>
+                                                    <>
+                                                        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                                            <h5 className="text-sm font-bold text-dark mb-3">Загрузить изображения для бизнеса</h5>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div>
+                                                                    <label className="block text-xs text-secondary mb-1">Аватар (логотип)</label>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={async (e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) {
+                                                                                setIsUploadingBusinessImage(true);
+                                                                                try {
+                                                                                    const url = await api.uploadFile(file, 'business-images');
+                                                                                    setBusinessImages(prev => ({ ...prev, avatar: url }));
+                                                                                } catch (err) {
+                                                                                    alert('Ошибка загрузки');
+                                                                                } finally {
+                                                                                    setIsUploadingBusinessImage(false);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        className="text-xs"
+                                                                        disabled={isUploadingBusinessImage}
+                                                                    />
+                                                                    {businessImages.avatar && (
+                                                                        <img src={businessImages.avatar} alt="Avatar" className="mt-2 w-20 h-20 object-cover rounded-lg" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs text-secondary mb-1">Шапка магазина</label>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={async (e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) {
+                                                                                setIsUploadingBusinessImage(true);
+                                                                                try {
+                                                                                    const url = await api.uploadFile(file, 'business-images');
+                                                                                    setBusinessImages(prev => ({ ...prev, header: url }));
+                                                                                } catch (err) {
+                                                                                    alert('Ошибка загрузки');
+                                                                                } finally {
+                                                                                    setIsUploadingBusinessImage(false);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        className="text-xs"
+                                                                        disabled={isUploadingBusinessImage}
+                                                                    />
+                                                                    {businessImages.header && (
+                                                                        <img src={businessImages.header} alt="Header" className="mt-2 w-full h-16 object-cover rounded-lg" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                                            <button
+                                                                onClick={() => handleApplicationAction(app.id, 'approved', app)}
+                                                                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg transition-colors"
+                                                            >
+                                                                Одобрить
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleApplicationAction(app.id, 'rejected', app)}
+                                                                className="flex-1 bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2 rounded-lg transition-colors"
+                                                            >
+                                                                Отклонить
+                                                            </button>
+                                                        </div>
+                                                        {isLoadingBusinesses ? (
+                                                            <div className="text-center py-20">
+                                                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                                                <p className="text-secondary mt-4">Загрузка...</p>
+                                                            </div>
+                                                        ) : allBusinesses.length === 0 ? (
+                                                            <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
+                                                                <p className="text-secondary">Нет зарегистрированных бизнесов</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-4">
+                                                                {allBusinesses.map(business => (
+                                                                    <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                                                                        <div className="flex justify-between items-start mb-4">
+                                                                            <div>
+                                                                                <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
+                                                                                <p className="text-sm text-secondary capitalize">{business.business_type}</p>
+                                                                            </div>
+                                                                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                                                                Активен
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                                            {business.business_data?.phone && (
+                                                                                <div>
+                                                                                    <span className="text-secondary">Телефон:</span>
+                                                                                    <p className="font-medium text-dark">{business.business_data.phone}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {business.business_data?.email && (
+                                                                                <div>
+                                                                                    <span className="text-secondary">Email:</span>
+                                                                                    <p className="font-medium text-dark">{business.business_data.email}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {business.business_data?.address && (
+                                                                                <div>
+                                                                                    <span className="text-secondary">Адрес:</span>
+                                                                                    <p className="font-medium text-dark">{business.business_data.address}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <span className="text-secondary">Дата создания:</span>
+                                                                                <p className="font-medium text-dark">
+                                                                                    {new Date(business.created_at).toLocaleDateString('ru-RU')}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {business.business_data?.description && (
+                                                                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                                                                <span className="text-xs text-secondary font-bold">Описание:</span>
+                                                                                <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                                                            <button
+                                                                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
+                                                                                onClick={() => alert('Функция редактирования в разработке')}
+                                                                            >
+                                                                                Редактировать
+                                                                            </button>
+                                                                            <button
+                                                                                className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
+                                                                                onClick={() => {
+                                                                                    if (confirm('Деактивировать бизнес?')) {
+                                                                                        alert('Функция деактивации в разработке');
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                Деактивировать
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
                                 )}
-                            </div>
-                        )}
-
-                        {activeTab === 'manage_businesses' && (
-                            <div className="max-w-4xl mx-auto">
-                                <h3 className="text-2xl font-bold text-dark mb-6">Управление бизнесами</h3>
-
-                                {isLoadingBusinesses ? (
-                                    <div className="text-center py-20">
-                                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                                        <p className="text-secondary mt-4">Загрузка...</p>
-                                    </div>
-                                ) : allBusinesses.length === 0 ? (
-                                    <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-                                        <p className="text-secondary">Нет зарегистрированных бизнесов</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {allBusinesses.map(business => (
-                                            <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div>
-                                                        <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
-                                                        <p className="text-sm text-secondary capitalize">{business.business_type}</p>
-                                                    </div>
-                                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                                        Активен
-                                                    </span>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                                                    {business.business_data?.phone && (
-                                                        <div>
-                                                            <span className="text-secondary">Телефон:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.phone}</p>
-                                                        </div>
-                                                    )}
-                                                    {business.business_data?.email && (
-                                                        <div>
-                                                            <span className="text-secondary">Email:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.email}</p>
-                                                        </div>
-                                                    )}
-                                                    {business.business_data?.address && (
-                                                        <div>
-                                                            <span className="text-secondary">Адрес:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.address}</p>
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <span className="text-secondary">Дата создания:</span>
-                                                        <p className="font-medium text-dark">
-                                                            {new Date(business.created_at).toLocaleDateString('ru-RU')}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {business.business_data?.description && (
-                                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                                        <span className="text-xs text-secondary font-bold">Описание:</span>
-                                                        <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                                    <button
-                                                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
-                                                        onClick={() => alert('Функция редактирования в разработке')}
-                                                    >
-                                                        Редактировать
-                                                    </button>
-                                                    <button
-                                                        className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
-                                                        onClick={() => {
-                                                            if (confirm('Деактивировать бизнес?')) {
-                                                                alert('Функция деактивации в разработке');
-                                                            }
-                                                        }}
-                                                    >
-                                                        Деактивировать
-                                                    </button>
-                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                </div>
                 </div>
             </div>
-        </div>
-    );
+                    );
 };

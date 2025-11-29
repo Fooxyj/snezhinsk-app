@@ -766,6 +766,24 @@ const App: React.FC = () => {
     });
 
     const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
+
+    // Fetch managed businesses from Supabase
+    const { data: managedBusinesses } = useQuery({
+        queryKey: ['managed_businesses'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('managed_businesses')
+                .select('*');
+
+            if (error) {
+                console.error('Error fetching managed businesses:', error);
+                return [];
+            }
+            return data || [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+
     const [user, setUser] = useState<User>(DEFAULT_USER);
     const [userBusinesses, setUserBusinesses] = useState<any[]>([]);
     const [weather, setWeather] = useState<{ temp: number, condition: string, pressure: number } | null>(null);
@@ -912,6 +930,68 @@ const App: React.FC = () => {
 
         fetchUserBusinesses();
     }, [user.isLoggedIn, user.id]);
+
+    // Merge managed businesses with shop listings
+    useEffect(() => {
+        if (managedBusinesses && managedBusinesses.length > 0) {
+            // Map managed businesses to Shop format
+            const businessShops = managedBusinesses
+                .filter((b: any) => b.business_type === 'shop' || b.business_type === 'service')
+                .map((b: any) => ({
+                    id: b.id,
+                    name: b.business_name,
+                    category: b.business_type === 'service' ? 'Услуги' : 'Магазины',
+                    description: b.business_data?.description || 'Описание скоро появится',
+                    image: b.business_data?.image || b.business_data?.avatar || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+                    logo: b.business_data?.avatar || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200',
+                    coverImage: b.business_data?.header || b.business_data?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
+                    address: b.business_data?.address || 'г. Снежинск',
+                    phone: b.business_data?.phone || '',
+                    workingHours: b.business_data?.hours || 'Уточняйте по телефону',
+                    rating: 4.5,
+                    products: b.business_data?.products || []
+                }));
+
+            const businessCafes = managedBusinesses
+                .filter((b: any) => b.business_type === 'cafe')
+                .map((b: any) => ({
+                    id: b.id,
+                    name: b.business_name,
+                    category: 'Кафе',
+                    description: b.business_data?.description || 'Описание скоро появится',
+                    image: b.business_data?.image || b.business_data?.avatar || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
+                    logo: b.business_data?.avatar || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200',
+                    coverImage: b.business_data?.header || b.business_data?.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+                    address: b.business_data?.address || 'г. Снежинск',
+                    phone: b.business_data?.phone || '',
+                    workingHours: b.business_data?.hours || 'Уточняйте по телефону',
+                    rating: 4.5,
+                    products: b.business_data?.products || []
+                }));
+
+            const businessRentals = managedBusinesses
+                .filter((b: any) => b.business_type === 'rental')
+                .map((b: any) => ({
+                    id: b.id,
+                    name: b.business_name,
+                    category: 'Аренда',
+                    description: b.business_data?.description || 'Описание скоро появится',
+                    image: b.business_data?.image || b.business_data?.avatar || 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=400',
+                    logo: b.business_data?.avatar || 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=200',
+                    coverImage: b.business_data?.header || b.business_data?.image || 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800',
+                    address: b.business_data?.address || 'г. Снежинск',
+                    phone: b.business_data?.phone || '',
+                    workingHours: b.business_data?.hours || 'Уточняйте по телефону',
+                    rating: 4.5,
+                    products: b.business_data?.products || []
+                }));
+
+            // Merge with existing shops
+            setShops([...INITIAL_SHOPS, ...(businessShops as Shop[])]);
+            setCafes([...INITIAL_CAFES, ...(businessCafes as Shop[])]);
+            setBeautyShops([...INITIAL_BEAUTY_SALONS, ...(businessRentals as Shop[])]);
+        }
+    }, [managedBusinesses]);
 
     useEffect(() => {
         try {
