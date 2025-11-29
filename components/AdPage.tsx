@@ -19,7 +19,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
   const [activeImage, setActiveImage] = useState(ad.image);
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
 
   const images = ad.images && ad.images.length > 0 ? ad.images : [ad.image];
   const sellerLevel = ad.authorLevel || Math.floor(Math.random() * 4) + 1;
@@ -147,7 +147,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
         >
           <div className="relative">
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center text-white font-bold text-xl shadow-md overflow-hidden">
-              {ad.authorAvatar ? (
+              {ad.authorAvatar && ad.authorAvatar.length > 0 ? (
                 <img src={ad.authorAvatar} alt={ad.authorName} className="w-full h-full object-cover" />
               ) : (
                 ad.authorName ? ad.authorName.charAt(0).toUpperCase() : 'Ч'
@@ -247,8 +247,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
         {/* Left Column: Images, Content */}
         <div className="lg:col-span-8 space-y-6">
           <div
-            className="bg-surface rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative aspect-[4/3] group cursor-zoom-in"
-            onClick={() => setIsLightboxOpen(true)}
+            className="bg-surface rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative aspect-[4/3] group"
           >
             <img src={activeImage} alt={ad.title} className="w-full h-full object-cover transition-opacity duration-300" />
             <div className="absolute top-4 left-4 flex gap-2">
@@ -286,6 +285,14 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
           {/* Mobile Action Card */}
           <div className="lg:hidden">
             <ActionCard />
+          </div>
+
+          {/* Description Block */}
+          <div className="bg-surface rounded-3xl p-8 shadow-sm border border-gray-100">
+            <h2 className="text-2xl font-bold text-dark mb-4">Описание</h2>
+            <div className="prose prose-lg text-secondary max-w-none whitespace-pre-wrap leading-relaxed">
+              {ad.description}
+            </div>
           </div>
 
           {/* Characteristics */}
@@ -338,14 +345,6 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
               </div>
             </div>
           )}
-
-          {/* Description Block */}
-          <div className="bg-surface rounded-3xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-dark mb-4">Описание</h2>
-            <div className="prose prose-lg text-secondary max-w-none whitespace-pre-wrap leading-relaxed">
-              {ad.description}
-            </div>
-          </div>
 
           {/* Location Block */}
           <div className="bg-surface rounded-3xl p-8 shadow-sm border border-gray-100">
@@ -400,68 +399,7 @@ export const AdPage: React.FC<AdPageProps> = ({ ad, onBack, onAddReview, onOpenC
           ad={ad}
         />
 
-        {/* Lightbox / Full Image Viewer */}
-        {isLightboxOpen && (
-          <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center animate-fade-in-up" onClick={() => setIsLightboxOpen(false)}>
-            <button
-              onClick={() => setIsLightboxOpen(false)}
-              className="absolute top-4 right-4 z-20 p-2 bg-black/50 rounded-full text-white hover:bg-white/20 transition-colors"
-            >
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
 
-            {/* Navigation Buttons (Desktop) */}
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIndex = images.indexOf(activeImage);
-                    const prevIndex = (currentIndex - 1 + images.length) % images.length;
-                    setActiveImage(images[prevIndex]);
-                  }}
-                  className="hidden md:flex absolute left-4 z-20 p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
-                >
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIndex = images.indexOf(activeImage);
-                    const nextIndex = (currentIndex + 1) % images.length;
-                    setActiveImage(images[nextIndex]);
-                  }}
-                  className="hidden md:flex absolute right-4 z-20 p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
-                >
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </button>
-              </>
-            )}
-
-            <div className="w-full h-full flex flex-col items-center justify-center p-0 md:p-4 relative">
-              <img
-                src={activeImage}
-                alt="Full View"
-                className="w-full h-full md:w-auto md:h-auto md:max-w-5xl md:max-h-[85vh] object-contain md:rounded-lg"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (images.length > 1) {
-                    const currentIndex = images.indexOf(activeImage);
-                    const nextIndex = (currentIndex + 1) % images.length;
-                    setActiveImage(images[nextIndex]);
-                  }
-                }}
-              />
-
-              {/* Image Counter */}
-              {images.length > 1 && (
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-                  {images.indexOf(activeImage) + 1} / {images.length}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
