@@ -79,6 +79,21 @@ export interface NewsItem {
   image: string;
 }
 
+export interface BusinessApplication {
+  id: string;
+  company_name: string;
+  business_type: string;
+  contact_person: string;
+  phone: string;
+  email: string;
+  comment?: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
 export interface Order {
   id: string;
   date: string;

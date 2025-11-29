@@ -745,6 +745,26 @@ const App: React.FC = () => {
     const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
 
     const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
+
+    // Fetch news from Supabase
+    const { data: fetchedNews } = useQuery({
+        queryKey: ['news'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('news')
+                .select('*')
+                .eq('status', 'published')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching news:', error);
+                return INITIAL_NEWS;
+            }
+            return data || INITIAL_NEWS;
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+
     const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
     const [user, setUser] = useState<User>(DEFAULT_USER);
     const [weather, setWeather] = useState<{ temp: number, condition: string, pressure: number } | null>(null);
@@ -849,6 +869,22 @@ const App: React.FC = () => {
             });
         }
     }, [fetchedAds]);
+
+    // Sync fetched news with local state
+    useEffect(() => {
+        if (fetchedNews && fetchedNews.length > 0) {
+            const dbNews: NewsItem[] = fetchedNews.map((item: any) => ({
+                id: item.id,
+                title: item.title,
+                excerpt: item.excerpt,
+                content: item.content,
+                category: item.category,
+                image: item.image,
+                date: new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+            }));
+            setNews(dbNews);
+        }
+    }, [fetchedNews]);
 
     useEffect(() => {
         try {
@@ -2138,6 +2174,11 @@ const App: React.FC = () => {
             <PartnerModal
                 isOpen={isPartnerModalOpen}
                 onClose={() => setIsPartnerModalOpen(false)}
+                isLoggedIn={user.isLoggedIn}
+                onRequireLogin={() => {
+                    setIsPartnerModalOpen(false);
+                    setIsLoginModalOpen(true);
+                }}
             />
 
             {user.isAdmin && (
