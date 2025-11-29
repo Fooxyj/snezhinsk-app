@@ -15,7 +15,7 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, onUpdateAdStatus, onUpdateAdContent, onAddNews }) => {
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState<'moderation' | 'active_ads' | 'news' | 'business_apps' | 'manage_businesses'>('moderation');
+    const [activeTab, setActiveTab] = useState<'moderation' | 'active_ads' | 'news' | 'business_apps' | 'manage_businesses' | 'stories'>('moderation');
     const [editingAdId, setEditingAdId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Ad>>({});
     const [businessApplications, setBusinessApplications] = useState<BusinessApplication[]>([]);
@@ -24,6 +24,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
     const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(false);
     const [businessImages, setBusinessImages] = useState<{ avatar?: string, header?: string }>({});
     const [isUploadingBusinessImage, setIsUploadingBusinessImage] = useState(false);
+
+    // Stories State
+    const [stories, setStories] = useState<any[]>([]);
+    const [isLoadingStories, setIsLoadingStories] = useState(false);
+    const [editingStory, setEditingStory] = useState<any>(null);
+    const [storyForm, setStoryForm] = useState({
+        shop_id: '',
+        shop_name: '',
+        avatar: '',
+        image: '',
+        text: '',
+        expires_at: '',
+        display_order: 0
+    });
+    const [isUploadingStoryImage, setIsUploadingStoryImage] = useState(false);
+
+    // Business Editing State
+    const [editingBusiness, setEditingBusiness] = useState<any>(null);
+    const [businessEditForm, setBusinessEditForm] = useState({
+        business_name: '',
+        description: '',
+        address: '',
+        phone: '',
+        email: '',
+        hours: ''
+    });
 
     // News Form State
     const [newsForm, setNewsForm] = useState({
@@ -44,6 +70,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
         }
         if (activeTab === 'manage_businesses' && isOpen) {
             fetchAllBusinesses();
+        }
+        if (activeTab === 'stories' && isOpen) {
+            fetchStories();
         }
     }, [activeTab, isOpen]);
 
@@ -80,6 +109,193 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             setIsLoadingBusinesses(false);
         }
     };
+
+    const fetchStories = async () => {
+        setIsLoadingStories(true);
+        try {
+            const { data, error } = await supabase
+                .from('stories')
+                .select('*')
+                .order('display_order', { ascending: true });
+
+            if (error) throw error;
+            setStories(data || []);
+        } catch (err) {
+            console.error('Error fetching stories:', err);
+        } finally {
+            setIsLoadingStories(false);
+        }
+    };
+
+    const handleStoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar' | 'image') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setIsUploadingStoryImage(true);
+            try {
+                const url = await api.uploadFile(file, 'story-images');
+                setStoryForm(prev => ({ ...prev, [field]: url }));
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка загрузки изображения');
+            } finally {
+                setIsUploadingStoryImage(false);
+            }
+        }
+    };
+
+    const handleSaveStory = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Пользователь не авторизован');
+                return;
+            }
+
+            const payload = {
+                ...storyForm,
+                created_by: user.id,
+                expires_at: storyForm.expires_at || null
+            };
+
+            if (editingStory) {
+                const { error } = await supabase
+                    .from('stories')
+                    .update(payload)
+                    .eq('id', editingStory.id);
+
+                if (error) throw error;
+                alert('История обновлена!');
+            } else {
+                const { error } = await supabase
+                    .from('stories')
+                    .insert(payload);
+
+                if (error) throw error;
+                alert('История создана!');
+            }
+
+            setEditingStory(null);
+            setStoryForm({
+                shop_id: '',
+                shop_name: '',
+                avatar: '',
+                image: '',
+                text: '',
+                expires_at: '',
+                display_order: 0
+            });
+            fetchStories();
+        } catch (err: any) {
+            console.error('Error saving story:', err);
+            alert('Ошибка сохранения: ' + err.message);
+        }
+    };
+
+    const handleDeleteStory = async (storyId: string) => {
+        if (!confirm('Удалить эту историю?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('stories')
+                .delete()
+                .eq('id', storyId);
+
+            if (error) throw error;
+            alert('История удалена!');
+            fetchStories();
+        } catch (err: any) {
+            console.error('Error deleting story:', err);
+            alert('Ошибка удаления: ' + err.message);
+        }
+    };
+
+    const handleEditStory = (story: any) => {
+        setEditingStory(story);
+        setStoryForm({
+            shop_id: story.shop_id || '',
+            shop_name: story.shop_name,
+            avatar: story.avatar,
+            image: story.image,
+            text: story.text || '',
+            expires_at: story.expires_at || '',
+            display_order: story.display_order
+        });
+    };
+
+
+
+    const handleEditBusiness = (business: any) => {
+        setEditingBusiness(business);
+        setBusinessEditForm({
+            business_name: business.business_name,
+            description: business.business_data?.description || '',
+            address: business.business_data?.address || '',
+            phone: business.business_data?.phone || '',
+            email: business.business_data?.email || '',
+            hours: business.business_data?.hours || ''
+        });
+    };
+
+    const handleSaveBusiness = async () => {
+        if (!editingBusiness) return;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Пользователь не авторизован');
+                return;
+            }
+
+            const businessData = {
+                description: businessEditForm.description,
+                address: businessEditForm.address,
+                phone: businessEditForm.phone,
+                email: businessEditForm.email,
+                hours: businessEditForm.hours,
+                avatar: editingBusiness.business_data?.avatar || '',
+                header: editingBusiness.business_data?.header || '',
+                contact_person: editingBusiness.business_data?.contact_person || ''
+            };
+
+            const { error } = await supabase
+                .from('managed_businesses')
+                .update({
+                    business_name: businessEditForm.business_name,
+                    business_data: businessData,
+                    last_edited_by: user.id
+                })
+                .eq('id', editingBusiness.id);
+
+            if (error) throw error;
+
+            alert('Бизнес обновлён!');
+            setEditingBusiness(null);
+            fetchAllBusinesses();
+        } catch (err: any) {
+            console.error('Error updating business:', err);
+            alert('Ошибка обновления: ' + err.message);
+        }
+    };
+
+    const handleDeactivateBusiness = async (businessId: string) => {
+        if (!confirm('Деактивировать этот бизнес? Он будет удалён из базы данных.')) return;
+
+        try {
+            const { error } = await supabase
+                .from('managed_businesses')
+                .delete()
+                .eq('id', businessId);
+
+            if (error) throw error;
+
+            alert('Бизнес деактивирован!');
+            fetchAllBusinesses();
+        } catch (err: any) {
+            console.error('Error deactivating business:', err);
+            alert('Ошибка деактивации: ' + err.message);
+        }
+    };
+
 
     const handleApplicationAction = async (appId: string, newStatus: 'approved' | 'rejected', app: BusinessApplication) => {
         try {
@@ -311,6 +527,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             {allBusinesses.length > 0 && (
                                 <span className="ml-auto bg-gray-200 text-xs px-2 py-0.5 rounded-full">
                                     {allBusinesses.length}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('stories')}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
+                            ${activeTab === 'stories' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+                            Истории
+                            {stories.length > 0 && (
+                                <span className="ml-auto bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">
+                                    {stories.length}
                                 </span>
                             )}
                         </button>
@@ -765,72 +994,350 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                         <p className="text-secondary">Нет зарегистрированных бизнесов</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
-                                        {allBusinesses.map(business => (
-                                            <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                                                <div className="flex justify-between items-start mb-4">
+                                    <>
+                                        {/* Business Edit Form */}
+                                        {editingBusiness && (
+                                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
+                                                <h4 className="text-lg font-bold text-dark mb-4">Редактирование бизнеса</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
-                                                        <p className="text-sm text-secondary capitalize">{business.business_type}</p>
+                                                        <label className="block text-sm font-bold text-dark mb-2">Название</label>
+                                                        <input
+                                                            type="text"
+                                                            value={businessEditForm.business_name}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, business_name: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                        />
                                                     </div>
-                                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                                        Активен
-                                                    </span>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                                                    {business.business_data?.phone && (
-                                                        <div>
-                                                            <span className="text-secondary">Телефон:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.phone}</p>
-                                                        </div>
-                                                    )}
-                                                    {business.business_data?.email && (
-                                                        <div>
-                                                            <span className="text-secondary">Email:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.email}</p>
-                                                        </div>
-                                                    )}
-                                                    {business.business_data?.address && (
-                                                        <div>
-                                                            <span className="text-secondary">Адрес:</span>
-                                                            <p className="font-medium text-dark">{business.business_data.address}</p>
-                                                        </div>
-                                                    )}
                                                     <div>
-                                                        <span className="text-secondary">Дата создания:</span>
-                                                        <p className="font-medium text-dark">
-                                                            {(() => {
-                                                                const date = new Date(business.created_at);
-                                                                return date.toLocaleDateString('ru-RU');
-                                                            })()}
-                                                        </p>
+                                                        <label className="block text-sm font-bold text-dark mb-2">Телефон</label>
+                                                        <input
+                                                            type="text"
+                                                            value={businessEditForm.phone}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, phone: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-dark mb-2">Email</label>
+                                                        <input
+                                                            type="email"
+                                                            value={businessEditForm.email}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, email: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-dark mb-2">Адрес</label>
+                                                        <input
+                                                            type="text"
+                                                            value={businessEditForm.address}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, address: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-dark mb-2">Часы работы</label>
+                                                        <input
+                                                            type="text"
+                                                            value={businessEditForm.hours}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, hours: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                            placeholder="Пн-Пт: 9:00-18:00"
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-bold text-dark mb-2">Описание</label>
+                                                        <textarea
+                                                            value={businessEditForm.description}
+                                                            onChange={e => setBusinessEditForm({ ...businessEditForm, description: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                            rows={3}
+                                                        />
                                                     </div>
                                                 </div>
+                                                <div className="flex gap-3 mt-4">
+                                                    <button
+                                                        onClick={handleSaveBusiness}
+                                                        className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-dark transition-colors"
+                                                    >
+                                                        Сохранить
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingBusiness(null)}
+                                                        className="bg-gray-100 text-dark px-6 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+                                                    >
+                                                        Отмена
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                                {business.business_data?.description && (
-                                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                                        <span className="text-xs text-secondary font-bold">Описание:</span>
-                                                        <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
+                                        <div className="space-y-4">
+                                            {allBusinesses.map(business => (
+                                                <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div>
+                                                            <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
+                                                            <p className="text-sm text-secondary capitalize">{business.business_type}</p>
+                                                        </div>
+                                                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                                            Активен
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                        {business.business_data?.phone && (
+                                                            <div>
+                                                                <span className="text-secondary">Телефон:</span>
+                                                                <p className="font-medium text-dark">{business.business_data.phone}</p>
+                                                            </div>
+                                                        )}
+                                                        {business.business_data?.email && (
+                                                            <div>
+                                                                <span className="text-secondary">Email:</span>
+                                                                <p className="font-medium text-dark">{business.business_data.email}</p>
+                                                            </div>
+                                                        )}
+                                                        {business.business_data?.address && (
+                                                            <div>
+                                                                <span className="text-secondary">Адрес:</span>
+                                                                <p className="font-medium text-dark">{business.business_data.address}</p>
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <span className="text-secondary">Дата создания:</span>
+                                                            <p className="font-medium text-dark">
+                                                                {(() => {
+                                                                    const date = new Date(business.created_at);
+                                                                    return date.toLocaleDateString('ru-RU');
+                                                                })()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {business.business_data?.description && (
+                                                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                                            <span className="text-xs text-secondary font-bold">Описание:</span>
+                                                            <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                                        <button
+                                                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
+                                                            onClick={() => handleEditBusiness(business)}
+                                                        >
+                                                            Редактировать
+                                                        </button>
+                                                        <button
+                                                            className="px-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition-colors"
+                                                            onClick={() => handleDeactivateBusiness(business.id)}
+                                                        >
+                                                            Деактивировать
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                )}
+                                    </div>
+                        )}
+                            </div>
+
+                    {/* Stories Tab */}
+                        {activeTab === 'stories' && (
+                            <div className="max-w-6xl mx-auto">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-2xl font-bold text-dark">Управление историями</h3>
+                                    <button
+                                        onClick={() => {
+                                            setEditingStory(null);
+                                            setStoryForm({
+                                                shop_id: '',
+                                                shop_name: '',
+                                                avatar: '',
+                                                image: '',
+                                                text: '',
+                                                expires_at: '',
+                                                display_order: 0
+                                            });
+                                        }}
+                                        className="bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-primary-dark transition-colors"
+                                    >
+                                        + Создать историю
+                                    </button>
+                                </div>
+
+                                {/* Story Form */}
+                                {(editingStory || storyForm.shop_name) && (
+                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
+                                        <h4 className="text-lg font-bold text-dark mb-4">
+                                            {editingStory ? 'Редактировать историю' : 'Новая история'}
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">Название магазина</label>
+                                                <input
+                                                    type="text"
+                                                    value={storyForm.shop_name}
+                                                    onChange={e => setStoryForm({ ...storyForm, shop_name: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                    placeholder="Название магазина"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">ID магазина (опционально)</label>
+                                                <input
+                                                    type="text"
+                                                    value={storyForm.shop_id}
+                                                    onChange={e => setStoryForm({ ...storyForm, shop_id: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                    placeholder="ID из managed_businesses"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">Аватар магазина</label>
+                                                <div className="space-y-2">
+                                                    {storyForm.avatar && (
+                                                        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+                                                            <img src={storyForm.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                                        </div>
+                                                    )}
+                                                    <label className="block">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={e => handleStoryImageUpload(e, 'avatar')}
+                                                            disabled={isUploadingStoryImage}
+                                                            className="hidden"
+                                                        />
+                                                        <div className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-4 text-center cursor-pointer hover:bg-gray-100 transition-colors text-sm">
+                                                            {isUploadingStoryImage ? 'Загрузка...' : 'Загрузить аватар'}
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">Изображение истории</label>
+                                                <div className="space-y-2">
+                                                    {storyForm.image && (
+                                                        <div className="w-full h-32 rounded-xl overflow-hidden bg-gray-100">
+                                                            <img src={storyForm.image} alt="Story" className="w-full h-full object-cover" />
+                                                        </div>
+                                                    )}
+                                                    <label className="block">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={e => handleStoryImageUpload(e, 'image')}
+                                                            disabled={isUploadingStoryImage}
+                                                            className="hidden"
+                                                        />
+                                                        <div className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-4 text-center cursor-pointer hover:bg-gray-100 transition-colors text-sm">
+                                                            {isUploadingStoryImage ? 'Загрузка...' : 'Загрузить изображение'}
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">Текст (опционально)</label>
+                                                <textarea
+                                                    value={storyForm.text}
+                                                    onChange={e => setStoryForm({ ...storyForm, text: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                    placeholder="Текст на истории"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-dark mb-2">Порядок отображения</label>
+                                                <input
+                                                    type="number"
+                                                    value={storyForm.display_order}
+                                                    onChange={e => setStoryForm({ ...storyForm, display_order: Number(e.target.value) })}
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 mt-4">
+                                            <button
+                                                onClick={handleSaveStory}
+                                                className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-dark transition-colors"
+                                            >
+                                                {editingStory ? 'Сохранить' : 'Создать'}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingStory(null);
+                                                    setStoryForm({
+                                                        shop_id: '',
+                                                        shop_name: '',
+                                                        avatar: '',
+                                                        image: '',
+                                                        text: '',
+                                                        expires_at: '',
+                                                        display_order: 0
+                                                    });
+                                                }}
+                                                className="bg-gray-100 text-dark px-6 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+                                            >
+                                                Отмена
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Stories List */}
+                                {isLoadingStories ? (
+                                    <div className="text-center py-20">
+                                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                        <p className="text-secondary mt-4">Загрузка историй...</p>
+                                    </div>
+                                ) : stories.length === 0 ? (
+                                    <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
+                                        <p className="text-secondary">Нет созданных историй</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {stories.map(story => (
+                                            <div key={story.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                                                        {story.avatar ? (
+                                                            <img src={story.avatar} alt={story.shop_name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold">
+                                                                {story.shop_name.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-grow">
+                                                        <h4 className="font-bold text-dark">{story.shop_name}</h4>
+                                                        <p className="text-xs text-secondary">Порядок: {story.display_order}</p>
+                                                    </div>
+                                                </div>
+                                                {story.image && (
+                                                    <div className="w-full h-48 rounded-xl overflow-hidden bg-gray-100 mb-3">
+                                                        <img src={story.image} alt="Story" className="w-full h-full object-cover" />
                                                     </div>
                                                 )}
-
-                                                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                                {story.text && (
+                                                    <p className="text-sm text-dark mb-3 line-clamp-2">{story.text}</p>
+                                                )}
+                                                <div className="flex gap-2">
                                                     <button
-                                                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
-                                                        onClick={() => alert('Функция редактирования в разработке')}
+                                                        onClick={() => handleEditStory(story)}
+                                                        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-bold hover:bg-blue-600 transition-colors text-sm"
                                                     >
                                                         Редактировать
                                                     </button>
                                                     <button
-                                                        className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
-                                                        onClick={() => {
-                                                            if (confirm('Деактивировать бизнес?')) {
-                                                                alert('Функция деактивации в разработке');
-                                                            }
-                                                        }}
+                                                        onClick={() => handleDeleteStory(story.id)}
+                                                        className="px-4 bg-red-500 text-white py-2 rounded-lg font-bold hover:bg-red-600 transition-colors text-sm"
                                                     >
-                                                        Деактивировать
+                                                        Удалить
                                                     </button>
                                                 </div>
                                             </div>
@@ -839,9 +1346,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                 )}
                             </div>
                         )}
+
                     </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 };
