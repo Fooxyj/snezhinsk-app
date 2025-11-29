@@ -712,90 +712,104 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                                                 Отклонить
                                                             </button>
                                                         </div>
-                                                        {isLoadingBusinesses ? (
-                                                            <div className="text-center py-20">
-                                                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                                                                <p className="text-secondary mt-4">Загрузка...</p>
-                                                            </div>
-                                                        ) : allBusinesses.length === 0 ? (
-                                                            <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-                                                                <p className="text-secondary">Нет зарегистрированных бизнесов</p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="space-y-4">
-                                                                {allBusinesses.map(business => (
-                                                                    <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                                                                        <div className="flex justify-between items-start mb-4">
-                                                                            <div>
-                                                                                <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
-                                                                                <p className="text-sm text-secondary capitalize">{business.business_type}</p>
-                                                                            </div>
-                                                                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                                                                Активен
-                                                                            </span>
-                                                                        </div>
-
-                                                                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                                                                            {business.business_data?.phone && (
-                                                                                <div>
-                                                                                    <span className="text-secondary">Телефон:</span>
-                                                                                    <p className="font-medium text-dark">{business.business_data.phone}</p>
-                                                                                </div>
-                                                                            )}
-                                                                            {business.business_data?.email && (
-                                                                                <div>
-                                                                                    <span className="text-secondary">Email:</span>
-                                                                                    <p className="font-medium text-dark">{business.business_data.email}</p>
-                                                                                </div>
-                                                                            )}
-                                                                            {business.business_data?.address && (
-                                                                                <div>
-                                                                                    <span className="text-secondary">Адрес:</span>
-                                                                                    <p className="font-medium text-dark">{business.business_data.address}</p>
-                                                                                </div>
-                                                                            )}
-                                                                            <div>
-                                                                                <span className="text-secondary">Дата создания:</span>
-                                                                                <p className="font-medium text-dark">
-                                                                                    {new Date(business.created_at).toLocaleDateString('ru-RU')}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {business.business_data?.description && (
-                                                                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                                                                <span className="text-xs text-secondary font-bold">Описание:</span>
-                                                                                <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
-                                                                            </div>
-                                                                        )}
-
-                                                                        <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                                                            <button
-                                                                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
-                                                                                onClick={() => alert('Функция редактирования в разработке')}
-                                                                            >
-                                                                                Редактировать
-                                                                            </button>
-                                                                            <button
-                                                                                className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
-                                                                                onClick={() => {
-                                                                                    if (confirm('Деактивировать бизнес?')) {
-                                                                                        alert('Функция деактивации в разработке');
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                Деактивировать
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                )}
+                                                    </>
+                                                )}
                                             </div>
-                </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'manage_businesses' && (
+                            <div className="max-w-4xl mx-auto">
+                                <h3 className="text-2xl font-bold text-dark mb-6">Управление бизнесами</h3>
+
+                                {isLoadingBusinesses ? (
+                                    <div className="text-center py-20">
+                                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                        <p className="text-secondary mt-4">Загрузка...</p>
+                                    </div>
+                                ) : allBusinesses.length === 0 ? (
+                                    <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
+                                        <p className="text-secondary">Нет зарегистрированных бизнесов</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {allBusinesses.map(business => (
+                                            <div key={business.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div>
+                                                        <h4 className="text-lg font-bold text-dark">{business.business_name}</h4>
+                                                        <p className="text-sm text-secondary capitalize">{business.business_type}</p>
+                                                    </div>
+                                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                                        Активен
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                    {business.business_data?.phone && (
+                                                        <div>
+                                                            <span className="text-secondary">Телефон:</span>
+                                                            <p className="font-medium text-dark">{business.business_data.phone}</p>
+                                                        </div>
+                                                    )}
+                                                    {business.business_data?.email && (
+                                                        <div>
+                                                            <span className="text-secondary">Email:</span>
+                                                            <p className="font-medium text-dark">{business.business_data.email}</p>
+                                                        </div>
+                                                    )}
+                                                    {business.business_data?.address && (
+                                                        <div>
+                                                            <span className="text-secondary">Адрес:</span>
+                                                            <p className="font-medium text-dark">{business.business_data.address}</p>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <span className="text-secondary">Дата создания:</span>
+                                                        <p className="font-medium text-dark">
+                                                            {new Date(business.created_at).toLocaleDateString('ru-RU')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {business.business_data?.description && (
+                                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                                        <span className="text-xs text-secondary font-bold">Описание:</span>
+                                                        <p className="text-sm text-dark mt-1">{business.business_data.description}</p>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                                    <button
+                                                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
+                                                        onClick={() => alert('Функция редактирования в разработке')}
+                                                    >
+                                                        Редактировать
+                                                    </button>
+                                                    <button
+                                                        className="px-4 bg-gray-100 hover:bg-gray-200 text-dark font-bold py-2 rounded-lg transition-colors"
+                                                        onClick={() => {
+                                                            if (confirm('Деактивировать бизнес?')) {
+                                                                alert('Функция деактивации в разработке');
+                                                            }
+                                                        }}
+                                                    >
+                                                        Деактивировать
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-                    );
+        </div>
+    );
+};
 };
