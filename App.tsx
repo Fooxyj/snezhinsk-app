@@ -754,7 +754,7 @@ const App: React.FC = () => {
     }, []);
     const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
 
-    const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
+    const [ads, setAds] = useState<Ad[]>([]); // Start with empty array, load from DB only
 
     // Fetch news from Supabase
     const { data: fetchedNews } = useQuery({

@@ -36,21 +36,7 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
             // Fetch all chats where user is buyer
             const { data: buyerChats, error: buyerError } = await supabase
                 .from('chats')
-                .select(`
-                    id, 
-                    ad_id, 
-                    buyer_id,
-                    created_at,
-                    ads (
-                        id,
-                        title,
-                        image,
-                        category,
-                        user_id,
-                        author_name,
-                        author_avatar
-                    )
-                `)
+                .select('id, ad_id, buyer_id, created_at')
                 .eq('buyer_id', currentUserId)
                 .order('created_at', { ascending: false });
 
@@ -60,28 +46,10 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
                 console.log('✅ Buyer chats raw data:', buyerChats);
             }
 
-            // Fetch all chats and filter where user is seller (ads.user_id === currentUserId)
+            // Fetch all chats to find seller chats
             const { data: allChats, error: allChatsError } = await supabase
                 .from('chats')
-                .select(`
-                    id, 
-                    ad_id, 
-                    buyer_id,
-                    created_at,
-                    ads (
-                        id,
-                        title,
-                        image,
-                        category,
-                        user_id,
-                        author_name,
-                        author_avatar
-                    ),
-                    buyer:buyer_id (
-                        full_name,
-                        avatar_url
-                    )
-                `)
+                .select('id, ad_id, buyer_id, created_at')
                 .order('created_at', { ascending: false });
 
             if (allChatsError) {
@@ -90,11 +58,34 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
                 console.log('✅ All chats raw data (count):', allChats?.length);
             }
 
+            // Now fetch ad details for all chats
+            const allAdIds = [...new Set([
+                ...(buyerChats || []).map(c => c.ad_id),
+                ...(allChats || []).map(c => c.ad_id)
+            ])];
+
+            const { data: adsData } = await supabase
+                .from('ads')
+                .select('id, title, image, category, user_id, author_name, author_avatar')
+                .in('id', allAdIds);
+
+            const adsMap = new Map((adsData || []).map(ad => [ad.id, ad]));
+
+            // Fetch buyer profiles for seller chats
+            const buyerIds = [...new Set((allChats || []).map(c => c.buyer_id))];
+            const { data: buyersData } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .in('id', buyerIds);
+
+            const buyersMap = new Map((buyersData || []).map(b => [b.id, b]));
+
             // Filter seller chats client-side
             const sellerChats = (allChats || []).filter((chat: any) => {
-                const isSeller = chat.ads && chat.ads.user_id === currentUserId;
+                const ad = adsMap.get(chat.ad_id);
+                const isSeller = ad && ad.user_id === currentUserId;
                 if (isSeller) {
-                    console.log('🔍 Found seller chat:', chat.id, 'for ad:', chat.ads?.title);
+                    console.log('🔍 Found seller chat:', chat.id, 'for ad:', ad?.title);
                 }
                 return isSeller;
             });
@@ -108,34 +99,41 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
             console.log('  - Current user ID:', currentUserId);
 
             // Format Buyer Chats
-            const formattedBuyerChats = bChats.map((c: any) => ({
-                id: c.id,
-                chatId: c.id,
-                adId: c.ad_id,
-                adTitle: c.ads?.title || 'Объявление удалено',
-                adImage: c.ads?.image || 'https://via.placeholder.com/150',
-                partnerName: c.ads?.author_name || 'Продавец',
-                partnerAvatar: c.ads?.author_avatar,
-                lastMessage: 'Вы: Интересует товар',
-                date: new Date(c.created_at).toLocaleDateString(),
-                isBuying: true,
-                category: c.ads?.category
-            }));
+            const formattedBuyerChats = bChats.map((c: any) => {
+                const ad = adsMap.get(c.ad_id);
+                return {
+                    id: c.id,
+                    chatId: c.id,
+                    adId: c.ad_id,
+                    adTitle: ad?.title || 'Объявление удалено',
+                    adImage: ad?.image || 'https://via.placeholder.com/150',
+                    partnerName: ad?.author_name || 'Продавец',
+                    partnerAvatar: ad?.author_avatar,
+                    lastMessage: 'Вы: Интересует товар',
+                    date: new Date(c.created_at).toLocaleDateString(),
+                    isBuying: true,
+                    category: ad?.category
+                };
+            });
 
             // Format Seller Chats
-            const formattedSellerChats = sChats.map((c: any) => ({
-                id: c.id,
-                chatId: c.id,
-                adId: c.ad_id,
-                adTitle: c.ads?.title || 'Объявление',
-                adImage: c.ads?.image || 'https://via.placeholder.com/150',
-                partnerName: c.buyer?.full_name || 'Покупатель',
-                partnerAvatar: c.buyer?.avatar_url,
-                lastMessage: 'Покупатель интересуется',
-                date: new Date(c.created_at).toLocaleDateString(),
-                isBuying: false,
-                category: c.ads?.category
-            }));
+            const formattedSellerChats = sChats.map((c: any) => {
+                const ad = adsMap.get(c.ad_id);
+                const buyer = buyersMap.get(c.buyer_id);
+                return {
+                    id: c.id,
+                    chatId: c.id,
+                    adId: c.ad_id,
+                    adTitle: ad?.title || 'Объявление',
+                    adImage: ad?.image || 'https://via.placeholder.com/150',
+                    partnerName: buyer?.full_name || 'Покупатель',
+                    partnerAvatar: buyer?.avatar_url,
+                    lastMessage: 'Покупатель интересуется',
+                    date: new Date(c.created_at).toLocaleDateString(),
+                    isBuying: false,
+                    category: ad?.category
+                };
+            });
 
             // Merge and sort
             const allFormattedChats = [...formattedBuyerChats, ...formattedSellerChats].sort((a, b) =>
