@@ -1063,6 +1063,13 @@ const App: React.FC = () => {
                 if (session.user.email?.includes('cinema')) managedShopId = 'cinema1';
                 if (session.user.email?.includes('shop')) managedShopId = 's1';
 
+                // Fetch XP from profiles table
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('xp')
+                    .eq('id', session.user.id)
+                    .single();
+
                 setUser(prev => ({
                     ...prev,
                     id: session.user.id,
@@ -1073,18 +1080,25 @@ const App: React.FC = () => {
                     // Use metadata from Supabase as source of truth
                     name: session.user.user_metadata?.full_name || prev.name,
                     avatar: session.user.user_metadata?.avatar_url || prev.avatar,
-                    xp: prev.xp || 5
+                    xp: profileData?.xp || 0
                 }));
             }
         });
 
         // Real-time Auth Listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {
                 const isAdmin = session.user.email?.includes('admin') || session.user.email === 'hrustalev_1974@mail.ru';
                 let managedShopId = undefined;
                 if (session.user.email?.includes('cinema')) managedShopId = 'cinema1';
                 if (session.user.email?.includes('shop')) managedShopId = 's1';
+
+                // Fetch XP from profiles table
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('xp')
+                    .eq('id', session.user.id)
+                    .single();
 
                 setUser(prev => ({
                     ...prev,
@@ -1096,7 +1110,7 @@ const App: React.FC = () => {
                     // Sync profile data from session metadata
                     name: session.user.user_metadata?.full_name || prev.name,
                     avatar: session.user.user_metadata?.avatar_url || prev.avatar,
-                    xp: prev.xp || 50
+                    xp: profileData?.xp || 0
                 }));
             } else {
                 setUser(DEFAULT_USER);
@@ -1216,14 +1230,32 @@ const App: React.FC = () => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     };
 
-    const addXp = (amount: number, reason: string) => {
+    const addXp = async (amount: number, reason: string) => {
+        const newXp = (user.xp || 0) + amount;
+
+        // Update local state
         setUser(prev => {
-            const newXp = (prev.xp || 0) + amount;
             try {
                 localStorage.setItem('user_data', JSON.stringify({ ...prev, xp: newXp }));
             } catch (e) { }
             return { ...prev, xp: newXp };
         });
+
+        // Sync to database
+        if (user.isLoggedIn && user.id && user.id !== 'guest') {
+            try {
+                await supabase
+                    .from('profiles')
+                    .update({ xp: newXp, updated_at: new Date().toISOString() })
+                    .eq('id', user.id);
+
+                // Invalidate ads query to refresh with new level
+                queryClient.invalidateQueries({ queryKey: ['ads'] });
+            } catch (err) {
+                console.error('Failed to sync XP to database:', err);
+            }
+        }
+
         addNotification({
             id: Date.now(),
             message: `+${amount} XP: ${reason}`,
