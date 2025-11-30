@@ -28,7 +28,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
     // Stories State
     const [stories, setStories] = useState<any[]>([]);
     const [isLoadingStories, setIsLoadingStories] = useState(false);
-    const [editingStory, setEditingStory] = useState<any>(null);
+    const [editingStory, setEditingStory] = useState<any | null>(null);
+    const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [storyForm, setStoryForm] = useState({
         shop_id: '',
         shop_name: '',
@@ -179,6 +180,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             }
 
             setEditingStory(null);
+            setIsCreatingStory(false);
             setStoryForm({
                 shop_id: '',
                 shop_name: '',
@@ -250,22 +252,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                 return;
             }
 
-            const businessData = {
-                description: businessEditForm.description,
-                address: businessEditForm.address,
-                phone: businessEditForm.phone,
-                email: businessEditForm.email,
-                hours: businessEditForm.hours,
-                avatar: editingBusiness.business_data?.avatar || '',
-                header: editingBusiness.business_data?.header || '',
-                contact_person: editingBusiness.business_data?.contact_person || ''
-            };
-
             const { error } = await supabase
                 .from('managed_businesses')
                 .update({
                     business_name: businessEditForm.business_name,
-                    business_data: businessData,
+                    business_data: {
+                        ...editingBusiness.business_data,
+                        description: businessEditForm.description,
+                        address: businessEditForm.address,
+                        phone: businessEditForm.phone,
+                        email: businessEditForm.email,
+                        hours: businessEditForm.hours
+                    },
                     last_edited_by: user.id
                 })
                 .eq('id', editingBusiness.id);
@@ -310,31 +308,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             }
 
             if (newStatus === 'approved') {
-                // Create business entry with uploaded images
-                const businessData = {
-                    description: app.comment || '',
-                    address: '',
-                    phone: app.phone,
-                    email: app.email,
-                    hours: '',
-                    contact_person: app.contact_person,
-                    avatar: businessImages.avatar || '',
-                    header: businessImages.header || ''
-                };
-
-                const { data: businessEntry, error: businessError } = await supabase
+                // Create managed business entry
+                const { error: createError } = await supabase
                     .from('managed_businesses')
                     .insert({
                         user_id: app.user_id,
-                        business_type: app.business_type || 'shop', // Use type from application or default to 'shop'
                         business_name: app.company_name,
-                        business_data: businessData,
+                        business_type: app.business_type === 'Магазин / Ритейл' ? 'shop' :
+                            app.business_type === 'Ресторан / Кафе' ? 'cafe' :
+                                app.business_type === 'Услуги / Сервис' ? 'service' : 'other',
+                        status: 'active',
+                        business_data: {
+                            description: app.comment || '',
+                            phone: app.phone,
+                            email: app.email,
+                            contact_person: app.contact_person,
+                            avatar: businessImages.avatar || '',
+                            header: businessImages.header || '',
+                            address: 'г. Снежинск' // Default
+                        },
                         last_edited_by: user?.id
-                    })
-                    .select()
-                    .single();
+                    });
 
-                if (businessError) throw businessError;
+                if (createError) throw createError;
             }
 
             // Update application status
@@ -501,7 +497,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                     ${activeTab === 'active_ads' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                             Все объявления
                         </button>
                         <button
@@ -509,7 +505,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm
                     ${activeTab === 'news' ? 'bg-gray-100 text-dark font-bold' : 'text-secondary hover:bg-gray-50'}`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
                             Новости
                         </button>
                         <button
@@ -1161,6 +1157,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                     <button
                                         onClick={() => {
                                             setEditingStory(null);
+                                            setIsCreatingStory(true);
                                             setStoryForm({
                                                 shop_id: '',
                                                 shop_name: '',
@@ -1178,7 +1175,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                 </div>
 
                                 {/* Story Form */}
-                                {(editingStory || storyForm.shop_name) && (
+                                {(editingStory !== null || isCreatingStory) && (
                                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
                                         <h4 className="text-lg font-bold text-dark mb-4">
                                             {editingStory ? 'Редактировать историю' : 'Новая история'}
@@ -1279,6 +1276,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
                                             <button
                                                 onClick={() => {
                                                     setEditingStory(null);
+                                                    setIsCreatingStory(false);
                                                     setStoryForm({
                                                         shop_id: '',
                                                         shop_name: '',

@@ -211,6 +211,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             </button>
                         )}
 
+                        <button onClick={onOpenPartnerModal} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-primary to-blue-500 text-white shadow-md hover:scale-[1.02] transition-transform mb-2 group">
+                            Подключить бизнес
+                        </button>
+
                         <div className="h-px bg-gray-100 my-2"></div>
 
                         <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${activeTab === 'profile' ? 'bg-gray-100 text-dark' : 'text-secondary hover:bg-gray-50'}`}>
@@ -249,6 +253,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                 {user.managedShopId && (
                                     <button onClick={onOpenMerchantDashboard} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Бизнес Кабинет</button>
                                 )}
+                                <button onClick={onOpenPartnerModal} className="w-full bg-primary text-white py-3 rounded-xl font-bold">Подключить бизнес</button>
                             </div>
 
                             <div className="space-y-4">

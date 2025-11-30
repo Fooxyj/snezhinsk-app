@@ -130,7 +130,7 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-dark/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={onClose}>
             <div
                 className="bg-surface w-full max-w-md h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up"
                 onClick={e => e.stopPropagation()}
