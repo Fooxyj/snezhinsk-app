@@ -930,7 +930,7 @@ const App: React.FC = () => {
     // Fetch user's businesses when logged in
     useEffect(() => {
         const fetchUserBusinesses = async () => {
-            if (user.isLoggedIn && user.id) {
+            if (user.isLoggedIn && user.id && user.id !== 'guest') {
                 try {
                     const { data, error } = await supabase
                         .from('managed_businesses')

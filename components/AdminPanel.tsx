@@ -346,7 +346,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, ads, on
             if (error) throw error;
 
             // Refresh list
-            fetchBusinessApplications();
+            // fetchBusinessApplications(); // Can be slow, update local state instead
+            setBusinessApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+
             // Invalidate managed businesses query to update the main app UI immediately
             queryClient.invalidateQueries({ queryKey: ['managed_businesses'] });
 

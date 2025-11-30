@@ -22,7 +22,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ session, onBack, currentUser
     const { data: serverMessages, refetch } = useQuery({
         queryKey: ['chat', session.adId, currentUserId, session.chatId],
         queryFn: async () => {
-            if (!supabase || !currentUserId) return [];
+            if (!supabase || !currentUserId || currentUserId === 'guest') return [];
 
             try {
                 let targetChatId = session.chatId || chatId;
