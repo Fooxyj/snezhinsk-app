@@ -22,103 +22,75 @@ export const ChatList: React.FC<ChatListProps> = ({ isOpen, onClose, currentUser
     const fetchChats = async () => {
         setIsLoading(true);
         try {
-            // Fetch chats where I am buyer OR seller (via ad)
-            // This is a bit complex with Supabase simple client, so we might need a view or a complex query.
-            // For now, let's try to fetch chats where I am buyer, and chats where I am seller separately and merge.
+            console.log('Fetching chats for user:', currentUserId);
 
-            // 1. Where I am buyer
-            const { data: buyerChats, error: err1 } = await supabase
+            // Fetch ALL chats where I am buyer OR seller
+            // We use the .or() filter to get both sides in one query if possible, 
+            // but to be safe and get relations correctly, we might need to be careful.
+            // Let's try a direct query on 'chats' table.
+
+            const { data: allChats, error } = await supabase
                 .from('chats')
                 .select(`
                     id, 
                     ad_id, 
+                    buyer_id,
+                    seller_id,
                     created_at,
                     ads (
                         id,
                         title,
                         image,
-                        user_id,
+                        category,
                         author_name,
-                        author_avatar,
-                        category
+                        author_avatar
+                    ),
+                    buyer:buyer_id (
+                        full_name,
+                        avatar_url
+                    ),
+                    seller:seller_id (
+                        full_name,
+                        avatar_url
                     )
                 `)
-                .eq('buyer_id', currentUserId)
+                .or(`buyer_id.eq.${currentUserId},seller_id.eq.${currentUserId}`)
                 .order('created_at', { ascending: false });
 
-            if (err1) throw err1;
-
-            // 2. Where I am seller (Ad owner)
-            // We first find my ads, then find chats for those ads
-            const { data: myAds } = await supabase
-                .from('ads')
-                .select('id')
-                .eq('user_id', currentUserId);
-
-            let sellerChats: any[] = [];
-            if (myAds && myAds.length > 0) {
-                const adIds = myAds.map(a => a.id);
-                const { data: sChats, error: err2 } = await supabase
-                    .from('chats')
-                    .select(`
-                        id, 
-                        ad_id, 
-                        buyer_id,
-                        created_at,
-                        profiles:buyer_id (
-                            full_name,
-                            avatar_url
-                        ),
-                        ads (
-                            id,
-                            title,
-                            image,
-                            category
-                        )
-                    `)
-                    .in('ad_id', adIds)
-                    .order('created_at', { ascending: false });
-
-                if (err2) throw err2;
-                sellerChats = sChats || [];
+            if (error) {
+                console.error('Supabase error fetching chats:', error);
+                throw error;
             }
 
-            // Format and merge
-            const formattedBuyerChats = (buyerChats || []).map((c: any) => ({
-                id: c.id,
-                adId: c.ad_id,
-                adTitle: c.ads?.title || 'Объявление удалено',
-                adImage: c.ads?.image,
-                partnerName: c.ads?.author_name || 'Продавец',
-                partnerAvatar: c.ads?.author_avatar,
-                lastMessage: 'Нажмите, чтобы открыть', // We could fetch last message but keep it simple for now
-                date: new Date(c.created_at).toLocaleDateString(),
-                isBuying: true,
-                category: c.ads?.category
-            }));
+            console.log('Raw chats data:', allChats);
 
-            const formattedSellerChats = sellerChats.map((c: any) => ({
-                id: c.id,
-                adId: c.ad_id,
-                adTitle: c.ads?.title || 'Объявление',
-                adImage: c.ads?.image,
-                partnerName: c.profiles?.full_name || 'Покупатель',
-                partnerAvatar: c.profiles?.avatar_url,
-                lastMessage: 'Покупатель интересуется',
-                date: new Date(c.created_at).toLocaleDateString(),
-                isBuying: false,
-                category: c.ads?.category
-            }));
+            if (!allChats) {
+                setChats([]);
+                return;
+            }
 
-            // Merge and sort by date (newest first)
-            const allChats = [...formattedBuyerChats, ...formattedSellerChats].sort((a, b) =>
-                new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
+            const formattedChats = allChats.map((c: any) => {
+                const isBuying = c.buyer_id === currentUserId;
+                const partner = isBuying ? c.seller : c.buyer;
+                // Fallback if profile relation is missing (e.g. deleted user)
+                const partnerName = partner?.full_name || (isBuying ? c.ads?.author_name : 'Пользователь') || 'Собеседник';
+                const partnerAvatar = partner?.avatar_url || (isBuying ? c.ads?.author_avatar : null);
 
-            // Deduplicate by ID just in case
-            const uniqueChats = Array.from(new Map(allChats.map(item => [item.id, item])).values());
+                return {
+                    id: c.id,
+                    adId: c.ad_id,
+                    adTitle: c.ads?.title || 'Объявление удалено',
+                    adImage: c.ads?.image || 'https://via.placeholder.com/150',
+                    partnerName: partnerName,
+                    partnerAvatar: partnerAvatar,
+                    lastMessage: isBuying ? 'Вы: Интересует товар' : 'Покупатель: Интересует товар', // Placeholder
+                    date: new Date(c.created_at).toLocaleDateString(),
+                    isBuying: isBuying,
+                    category: c.ads?.category
+                };
+            });
 
-            setChats(uniqueChats);
+            setChats(formattedChats);
 
         } catch (err) {
             console.error('Error fetching chats:', err);

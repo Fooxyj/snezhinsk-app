@@ -26,7 +26,7 @@ interface UserProfileModalProps {
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     isOpen, onClose, user, onLogout, favorites, allAds, onToggleFavorite, onShowAd, onEditAd, onDeleteAd, onUpdateUser, onOpenAdminPanel, onOpenMerchantDashboard, onOpenPartnerModal
 }) => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'favorites' | 'orders' | 'my_ads'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'favorites' | 'orders' | 'my_ads' | 'messages'>('profile');
     const [name, setName] = useState(user.name || '');
     const [avatar, setAvatar] = useState(user.avatar || '');
     const [isUploading, setIsUploading] = useState(false);
@@ -102,7 +102,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return (
         <div className="fixed inset-0 bg-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-background w-full max-w-4xl h-[90vh] md:h-[80vh] rounded-3xl shadow-2xl relative overflow-hidden animate-fade-in-up flex flex-col md:flex-row"
+                className="bg-background w-full max-w-5xl h-[90vh] md:h-[85vh] rounded-3xl shadow-2xl relative overflow-hidden animate-fade-in-up flex flex-col md:flex-row"
                 onClick={e => e.stopPropagation()}
             >
 
@@ -148,6 +148,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${activeTab === 'profile' ? 'bg-dark text-white' : 'bg-gray-100 text-secondary'}`}
                     >
                         Профиль
+                    </button>
+                    <button
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent('open-chat-list'));
+                            onClose();
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors bg-gray-100 text-secondary`}
+                    >
+                        Сообщения
                     </button>
                     <button
                         onClick={() => setActiveTab('favorites')}
@@ -219,6 +228,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                         <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${activeTab === 'profile' ? 'bg-gray-100 text-dark' : 'text-secondary hover:bg-gray-50'}`}>
                             Профиль
+                        </button>
+                        <button onClick={() => { window.dispatchEvent(new CustomEvent('open-chat-list')); onClose(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-colors text-secondary hover:bg-gray-50`}>
+                            Сообщения
                         </button>
                         <button onClick={() => setActiveTab('favorites')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${activeTab === 'favorites' ? 'bg-gray-100 text-dark' : 'text-secondary hover:bg-gray-50'}`}>
                             Избранное <span className="ml-auto bg-gray-200 text-xs px-2 py-0.5 rounded-full">{favorites.length}</span>
@@ -384,26 +396,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     {activeTab === 'orders' && (
                         <div>
                             <h2 className="text-2xl font-bold mb-6 hidden md:block">История заказов</h2>
-                            <div className="grid grid-cols-2 gap-3 mb-6">
-                                <button className="bg-gray-50 p-3 rounded-xl flex flex-col items-center gap-2 hover:bg-gray-100 transition-colors">
-                                    <span className="text-2xl">❤️</span>
-                                    <span className="text-xs font-bold text-dark">Избранное</span>
-                                    <span className="text-[10px] text-secondary">{user.favorites?.length || 0}</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        // We need to trigger opening chat list. 
-                                        // Dispatch a custom event since we don't want to drill props too deep if not needed.
-                                        window.dispatchEvent(new CustomEvent('open-chat-list'));
-                                        onClose();
-                                    }}
-                                    className="bg-gray-50 p-3 rounded-xl flex flex-col items-center gap-2 hover:bg-gray-100 transition-colors"
-                                >
-                                    <span className="text-2xl">💬</span>
-                                    <span className="text-xs font-bold text-dark">Сообщения</span>
-                                    <span className="text-[10px] text-secondary">Открыть</span>
-                                </button>
-                            </div>
+                            {/* Buttons removed as requested */}
                             <div className="space-y-4">
                                 {orders.map(order => (
                                     <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
