@@ -143,7 +143,7 @@ const App: React.FC = () => {
     }, []);
     const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
 
-    const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
+    const [ads, setAds] = useState<Ad[]>([]);
 
     // Fetch news from Supabase
     const { data: fetchedNews } = useQuery({
@@ -432,7 +432,7 @@ const App: React.FC = () => {
                         setUserBusinesses(data);
                         // Update user object with has_business flag
                         if (data.length > 0 && !user.managedShopId) {
-                            setUser(prev => ({ ...prev, managedShopId: data[0].id }));
+                            setUser((prev: User) => ({ ...prev, managedShopId: data[0].id }));
                         }
                     }
                 } catch (err) {
@@ -499,10 +499,10 @@ const App: React.FC = () => {
                     products: b.business_data?.products || []
                 }));
 
-            // Merge with existing shops
-            setShops([...INITIAL_SHOPS, ...(businessShops as Shop[])]);
-            setCafes([...INITIAL_CAFES, ...(businessCafes as Shop[])]);
-            setBeautyShops([...INITIAL_BEAUTY_SALONS, ...(businessRentals as Shop[])]);
+            // Set managed businesses directly (no mock data to merge)
+            setShops(businessShops as Shop[]);
+            setCafes(businessCafes as Shop[]);
+            setBeautyShops(businessRentals as Shop[]);
         }
     }, [managedBusinesses]);
 
@@ -516,7 +516,7 @@ const App: React.FC = () => {
             const savedFavs = localStorage.getItem('favorites');
             if (savedFavs) {
                 const favIds: string[] = JSON.parse(savedFavs);
-                setUser(u => ({ ...u, favorites: favIds }));
+                setUser((u: User) => ({ ...u, favorites: favIds }));
             }
         } catch (e) { }
 
@@ -645,15 +645,15 @@ const App: React.FC = () => {
     }, [user.isLoggedIn, user.id, activeChatSession]);
 
     const addNotification = (note: Notification) => {
-        setNotifications(prev => [...prev, note]);
+        setNotifications((prev: Notification[]) => [...prev, note]);
     };
 
     const handleRemoveNotification = (id: number) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== id));
     };
 
     const addXp = (amount: number, reason: string) => {
-        setUser(prev => {
+        setUser((prev: User) => {
             const newXp = (prev.xp || 0) + amount;
             try {
                 localStorage.setItem('user_data', JSON.stringify({ ...prev, xp: newXp }));
