@@ -148,5 +148,367 @@ export const api = {
       if (error) throw error;
       return data;
     }
+  },
+
+  // ========================================
+  // CATEGORY ITEMS (Shops, Cafes, Gyms, etc.)
+  // ========================================
+  categoryItems: {
+    list: async (categoryId?: string) => {
+      let query = supabase
+        .from('category_items')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+
+    getById: async (id: string) => {
+      const { data, error } = await supabase
+        .from('category_items')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (itemData: any) => {
+      const { data, error } = await supabase
+        .from('category_items')
+        .insert(itemData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('category_items')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('category_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // PRODUCTS
+  // ========================================
+  products: {
+    list: async (itemId?: string) => {
+      let query = supabase
+        .from('products')
+        .select('*')
+        .eq('is_available', true)
+        .order('display_order', { ascending: true });
+
+      if (itemId) {
+        query = query.eq('item_id', itemId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (productData: any) => {
+      const { data, error } = await supabase
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // MOVIES
+  // ========================================
+  movies: {
+    list: async () => {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (movieData: any) => {
+      const { data, error } = await supabase
+        .from('movies')
+        .insert(movieData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('movies')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('movies')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // TRANSPORT SERVICES
+  // ========================================
+  transportServices: {
+    list: async (serviceType?: 'taxi' | 'freight') => {
+      let query = supabase
+        .from('transport_services')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (serviceType) {
+        query = query.eq('service_type', serviceType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (serviceData: any) => {
+      const { data, error } = await supabase
+        .from('transport_services')
+        .insert(serviceData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('transport_services')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('transport_services')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // BUS SCHEDULES
+  // ========================================
+  busSchedules: {
+    list: async (scheduleType?: 'city' | 'intercity') => {
+      let query = supabase
+        .from('bus_schedules')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (scheduleType) {
+        query = query.eq('schedule_type', scheduleType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (scheduleData: any) => {
+      const { data, error } = await supabase
+        .from('bus_schedules')
+        .insert(scheduleData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('bus_schedules')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('bus_schedules')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // EMERGENCY CONTACTS
+  // ========================================
+  emergencyContacts: {
+    list: async () => {
+      const { data, error } = await supabase
+        .from('emergency_contacts')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (contactData: any) => {
+      const { data, error } = await supabase
+        .from('emergency_contacts')
+        .insert(contactData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('emergency_contacts')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('emergency_contacts')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // MEDICINE SERVICES
+  // ========================================
+  medicineServices: {
+    list: async () => {
+      const { data, error } = await supabase
+        .from('medicine_services')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (serviceData: any) => {
+      const { data, error } = await supabase
+        .from('medicine_services')
+        .insert(serviceData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('medicine_services')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('medicine_services')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
+  },
+
+  // ========================================
+  // CULTURE PLACES
+  // ========================================
+  culturePlaces: {
+    list: async () => {
+      const { data, error } = await supabase
+        .from('culture_places')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+
+    create: async (placeData: any) => {
+      const { data, error } = await supabase
+        .from('culture_places')
+        .insert(placeData)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const { error } = await supabase
+        .from('culture_places')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+
+    delete: async (id: string) => {
+      const { error } = await supabase
+        .from('culture_places')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
   }
 };
